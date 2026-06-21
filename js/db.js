@@ -118,3 +118,22 @@ export async function setMeta(key, value) {
     return box;
   });
 }
+
+/* ---------- COOPERATIVO METADATA ---------- */
+
+export async function getActiveBoardId() {
+  return getMeta("activeBoardId", null);
+}
+
+export async function setActiveBoardId(boardId) {
+  return setMeta("activeBoardId", boardId);
+}
+
+export async function getSyncNickname() {
+  return getMeta("syncNickname", "");
+}
+
+export async function setSyncNickname(name) {
+  return setMeta("syncNickname", name);
+}
+

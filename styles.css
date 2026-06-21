@@ -108,7 +108,7 @@ body {
 }
 .pt-cbody { flex: 1; padding: 12px; min-width: 0; }
 .pt-badges { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 7px; }
-.pt-tag, .pt-type, .pt-prio, .pt-due, .pt-repeat {
+.pt-tag, .pt-type, .pt-prio, .pt-due, .pt-repeat, .pt-owner {
   font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
   padding: 3px 7px; border: 2px solid var(--line);
 }
@@ -117,6 +117,7 @@ body {
 .pt-prio { color: #fff; }
 .pt-repeat { background: #6B4FA0; color: #fff; }
 .pt-due { color: #fff; margin-left: auto; }
+.pt-owner { background: var(--water); color: #fff; }
 .pt-title { font-size: 16px; font-weight: 700; word-break: break-word; }
 .pt-detail { font-size: 13.5px; color: #5C4F3E; margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
 .pt-done .pt-title { text-decoration: line-through; color: var(--muted); }

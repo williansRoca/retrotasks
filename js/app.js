@@ -10,12 +10,17 @@
 
 import {
   getAllItems, putItem, removeItem, bulkReplaceItems, getMeta, setMeta,
+  getActiveBoardId, setActiveBoardId, getSyncNickname, setSyncNickname,
 } from "./db.js";
 import {
   TYPES, PRIORITIES, REPEATS, DEFAULT_CATEGORIES, PALETTE,
   createItem, touchItem, fmtDate, nextDate, dueStatus, inScope, sortItems,
 } from "./model.js";
 import { playSound } from "./sound.js";
+import {
+  isFirebaseConfigured, initFirebase, checkBoardExists, createBoard,
+  saveSharedItem, deleteSharedItem, subscribeToBoard,
+} from "./firebase.js";
 
 /* ---------- Estado en memoria ---------- */
 const state = {
@@ -30,6 +35,12 @@ const state = {
   filtersOpen: false,
   editing: null, // item en edicion, o null
   sheetOpen: false,
+  // --- Estado Cooperativo ---
+  activeBoardId: null,
+  syncNickname: "",
+  isFirebaseConfigured: false,
+  syncUnsubscribe: null,
+  syncStatusMessage: "",
 };
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -51,13 +62,101 @@ const el = (tag, props = {}, children = []) => {
 const sfx = (name) => { if (state.soundOn) playSound(name); };
 
 /* ---------- Carga inicial ---------- */
+function setupFirebaseSubscription(boardId) {
+  if (state.syncUnsubscribe) {
+    state.syncUnsubscribe();
+    state.syncUnsubscribe = null;
+  }
+  state.syncUnsubscribe = subscribeToBoard(boardId, (items) => {
+    state.items = items;
+    render();
+  });
+}
+
+async function disconnectBoard() {
+  if (state.syncUnsubscribe) {
+    state.syncUnsubscribe();
+    state.syncUnsubscribe = null;
+  }
+  state.activeBoardId = null;
+  await setActiveBoardId(null);
+  state.items = await getAllItems();
+  render();
+}
+
+function makeBoardId() {
+  return "RT-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+async function handleCreateBoard() {
+  if (!state.syncNickname.trim()) {
+    alert("Por favor, ingresa tu apodo primero.");
+    return;
+  }
+  const newBoardId = makeBoardId();
+  state.syncStatusMessage = "Creando tablero...";
+  renderDrawer();
+  
+  const success = await createBoard(newBoardId, state.syncNickname);
+  if (success) {
+    state.activeBoardId = newBoardId;
+    await setActiveBoardId(newBoardId);
+    state.syncStatusMessage = "";
+    setupFirebaseSubscription(newBoardId);
+    renderDrawer();
+    render();
+  } else {
+    state.syncStatusMessage = "Error al crear tablero en Firebase.";
+    renderDrawer();
+  }
+}
+
+async function handleJoinBoard(boardIdInput) {
+  const bId = (boardIdInput || "").trim().toUpperCase();
+  if (!bId) {
+    alert("Por favor, ingresa un código de tablero.");
+    return;
+  }
+  if (!state.syncNickname.trim()) {
+    alert("Por favor, ingresa tu apodo primero.");
+    return;
+  }
+  state.syncStatusMessage = "Buscando tablero...";
+  renderDrawer();
+  
+  const exists = await checkBoardExists(bId);
+  if (exists) {
+    state.activeBoardId = bId;
+    await setActiveBoardId(bId);
+    state.syncStatusMessage = "";
+    setupFirebaseSubscription(bId);
+    renderDrawer();
+    render();
+  } else {
+    state.syncStatusMessage = "El código de tablero no existe.";
+    renderDrawer();
+  }
+}
+
 async function init() {
   try {
-    state.items = await getAllItems();
     state.categories = await getMeta("categories", DEFAULT_CATEGORIES);
     state.soundOn = await getMeta("soundOn", false);
+
+    state.isFirebaseConfigured = isFirebaseConfigured();
+    state.activeBoardId = await getActiveBoardId();
+    state.syncNickname = await getSyncNickname();
+
+    if (state.isFirebaseConfigured && state.activeBoardId) {
+      setupFirebaseSubscription(state.activeBoardId);
+    } else {
+      state.items = await getAllItems();
+    }
   } catch (e) {
     console.error("Error cargando datos:", e);
+    try {
+      state.items = await getAllItems();
+    } catch (_) {}
   }
   renderShell();
   render();
@@ -224,6 +323,9 @@ function renderCard(it) {
       ? el("span", { class: "pt-repeat", title: `Se repite: ${it.repeat}` }, "\u27F3 " + it.repeat)
       : null,
     due ? el("span", { class: "pt-due", style: { background: due.color } }, due.label) : null,
+    state.activeBoardId && it.owner && it.owner !== "local-user"
+      ? el("span", { class: "pt-owner", title: `Creado por: ${it.owner}` }, `👤 ${it.owner}`)
+      : null,
   ]);
 
   const actions = el("div", { class: "pt-actions" }, [
@@ -266,10 +368,14 @@ async function toggleDone(id) {
   if (isRecurring) updated = touchItem(item, { due: nextDate(item.due, item.repeat) });
   else updated = touchItem(item, { done: !item.done });
 
-  state.items = state.items.map((i) => (i.id === id ? updated : i));
-  await putItem(updated);
+  if (state.activeBoardId) {
+    await saveSharedItem(state.activeBoardId, updated);
+  } else {
+    state.items = state.items.map((i) => (i.id === id ? updated : i));
+    await putItem(updated);
+    render();
+  }
 
-  render();
   if (willBeDone) {
     sfx("complete");
     pulseCard(id); // tras render: la tarjeta ya esta en el DOM
@@ -278,24 +384,38 @@ async function toggleDone(id) {
 
 async function deleteItem(id) {
   sfx("delete");
-  state.items = state.items.filter((i) => i.id !== id);
-  await removeItem(id);
-  render();
+  if (state.activeBoardId) {
+    await deleteSharedItem(state.activeBoardId, id);
+  } else {
+    state.items = state.items.filter((i) => i.id !== id);
+    await removeItem(id);
+    render();
+  }
 }
 
 async function saveFromSheet(data) {
   if (state.editing) {
     const updated = touchItem(state.editing, data);
-    state.items = state.items.map((i) => (i.id === state.editing.id ? updated : i));
-    await putItem(updated);
+    if (state.activeBoardId) {
+      await saveSharedItem(state.activeBoardId, updated);
+    } else {
+      state.items = state.items.map((i) => (i.id === state.editing.id ? updated : i));
+      await putItem(updated);
+    }
   } else {
-    const item = createItem(data);
-    state.items = [item, ...state.items];
-    await putItem(item);
+    const item = createItem({ ...data, owner: state.syncNickname || "local-user" });
+    if (state.activeBoardId) {
+      await saveSharedItem(state.activeBoardId, item);
+    } else {
+      state.items = [item, ...state.items];
+      await putItem(item);
+    }
     sfx("create");
   }
   closeSheet();
-  render();
+  if (!state.activeBoardId) {
+    render();
+  }
 }
 
 async function addCategory(name) {
@@ -405,6 +525,92 @@ function renderDrawer() {
   drawer.append(el("div", { class: "pt-drawer-sec" }, [
     el("label", { class: "pt-drawer-label" }, "Tipo"), typePills,
   ]));
+
+  // Cooperación (Firebase)
+  if (!state.isFirebaseConfigured) {
+    drawer.append(el("div", { class: "pt-drawer-sec" }, [
+      el("label", { class: "pt-drawer-label" }, "Cooperación Pixel"),
+      el("div", { class: "pt-hint", style: { color: "#D94343", fontStyle: "normal", fontWeight: "bold" } }, 
+        "⚠️ Configuración requerida: Edita el archivo `js/firebase.js` con las credenciales de tu proyecto de Firebase para habilitar el modo cooperativo."
+      ),
+    ]));
+  } else {
+    const syncBox = el("div", { class: "pt-drawer-sec" });
+    syncBox.append(el("label", { class: "pt-drawer-label" }, "Cooperación Pixel"));
+    
+    const nameInput = el("input", {
+      type: "text",
+      class: "pt-input",
+      style: { "margin-bottom": "8px", "padding": "6px", "width": "100%" },
+      placeholder: "Tu apodo (ej: Juan)",
+      value: state.syncNickname,
+      oninput: async (e) => {
+        state.syncNickname = e.target.value;
+        await setSyncNickname(state.syncNickname);
+      }
+    });
+    
+    syncBox.append(el("div", { style: { "margin-bottom": "8px" } }, [
+      el("div", { class: "pt-hint", style: { "margin-bottom": "4px" } }, "Escribe tu nombre para identificar tus tareas:"),
+      nameInput
+    ]));
+
+    if (state.activeBoardId) {
+      syncBox.append(el("div", {}, [
+        el("div", { class: "pt-hint", style: { "color": "#5BA84F", "font-weight": "bold", "margin-bottom": "8px" } }, 
+          `🟢 Conectado al Tablero: ${state.activeBoardId}`
+        ),
+        el("div", { class: "pt-pills" }, [
+          el("button", {
+            class: "pt-pill del",
+            onclick: () => {
+              if (confirm("¿Estás seguro de desconectarte del tablero? Volverás a tus tareas locales.")) {
+                disconnectBoard();
+                renderDrawer();
+              }
+            }
+          }, "Desconectar")
+        ])
+      ]));
+    } else {
+      const boardInput = el("input", {
+        type: "text",
+        class: "pt-input",
+        style: { "width": "120px", "text-transform": "uppercase", "margin-right": "8px", "padding": "6px" },
+        placeholder: "RT-XXXX"
+      });
+
+      const joinBtn = el("button", {
+        class: "pt-pill",
+        onclick: () => {
+          handleJoinBoard(boardInput.value);
+        }
+      }, "Unirse");
+
+      const createBtn = el("button", {
+        class: "pt-pill tinted",
+        style: { "background": "var(--soil-d)", "color": "#fff" },
+        onclick: () => {
+          handleCreateBoard();
+        }
+      }, "+ Crear Tablero");
+
+      syncBox.append(el("div", {}, [
+        el("div", { class: "pt-hint", style: { "margin-bottom": "8px" } }, "Tablero actual: 📁 Local (Solo tú)"),
+        el("div", { style: { "display": "flex", "align-items": "center", "margin-bottom": "8px" } }, [
+          boardInput,
+          joinBtn
+        ]),
+        el("div", {}, [createBtn])
+      ]));
+    }
+
+    if (state.syncStatusMessage) {
+      syncBox.append(el("div", { class: "pt-hint", style: { "color": "#E0A02E", "margin-top": "6px" } }, state.syncStatusMessage));
+    }
+
+    drawer.append(syncBox);
+  }
 
   // Datos / respaldo
   const importLabel = el("label", { class: "pt-pill", style: { cursor: "pointer" } }, "\u2912 Importar");
