@@ -1,0 +1,17 @@
+{
+  "name": "RetroTasks",
+  "short_name": "RetroTasks",
+  "description": "Gestor de tareas, notas y recordatorios con estilo pixel.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#7BB661",
+  "theme_color": "#D9A86C",
+  "lang": "es-CL",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

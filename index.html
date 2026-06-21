@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>RetroTasks</title>
+  <meta name="description" content="Gestor de tareas, notas y recordatorios con estilo pixel." />
+
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#D9A86C" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="RetroTasks" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- La interfaz completa se construye desde app.js -->
+  <main id="app" class="pt-app" aria-live="polite"></main>
+
+  <!-- Modulos ES: app.js importa db.js, model.js y sound.js -->
+  <script type="module" src="./js/app.js"></script>
+
+  <!-- Registro del Service Worker (offline + instalacion) -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js")
+          .catch((err) => console.warn("SW no registrado:", err));
+      });
+    }
+  </script>
+</body>
+</html>
