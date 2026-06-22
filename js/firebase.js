@@ -28,12 +28,24 @@ import {
 // Reemplaza este objeto con las credenciales de tu proyecto de Firebase Console.
 // Las puedes obtener en: https://console.firebase.google.com/
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_PROJECT_ID.firebaseapp.com",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_PROJECT_ID.appspot.com",
-  messagingSenderId: "TU_MESSAGING_SENDER_ID",
-  appId: "TU_APP_ID"
+  // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDxxnGbwQhqC-bJfoEwqfTsQmJMpLlBcqI",
+  authDomain: "retrotasks-903c9.firebaseapp.com",
+  databaseURL: "https://retrotasks-903c9-default-rtdb.firebaseio.com",
+  projectId: "retrotasks-903c9",
+  storageBucket: "retrotasks-903c9.firebasestorage.app",
+  messagingSenderId: "263400038199",
+  appId: "1:263400038199:web:3dadcf228027e1d82404b2"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 };
 
 let app = null;
