@@ -72,10 +72,21 @@ function requestNotificationPermission() {
 function sendDesktopNotification(title, message) {
   if ("Notification" in window && Notification.permission === "granted") {
     try {
-      new Notification(title, {
-        body: message,
-        icon: "./icons/icon-192.png"
-      });
+      if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then((reg) => {
+          reg.showNotification(title, {
+            body: message,
+            icon: "./icons/icon-192.png",
+            badge: "./icons/icon-192.png",
+            vibrate: [200, 100, 200]
+          });
+        });
+      } else {
+        new Notification(title, {
+          body: message,
+          icon: "./icons/icon-192.png"
+        });
+      }
     } catch (e) {
       console.warn("Error mostrando notificación de escritorio:", e);
     }
