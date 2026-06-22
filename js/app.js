@@ -385,12 +385,15 @@ function renderXP() {
 function renderFilters() {
   const box = $("#filters");
   box.innerHTML = "";
+  const isWide = window.innerWidth >= 768;
 
-  if (state.searchOpen) {
+  // Buscador
+  if (state.searchOpen || isWide) {
     const wrap = el("div", { class: "pt-searchwrap" }, [
       el("input", {
-        class: "pt-search", type: "search", value: state.query, autofocus: "true",
-        placeholder: "Buscar por titulo o detalle...", "aria-label": "Buscar tareas",
+        class: "pt-search", type: "search", value: state.query,
+        autofocus: isWide ? null : "true",
+        placeholder: "Buscar...", "aria-label": "Buscar tareas",
         oninput: (e) => { state.query = e.target.value; renderList(); },
       }),
     ]);
@@ -403,6 +406,7 @@ function renderFilters() {
     box.append(wrap);
   }
 
+  // Scope chips + botón filtros (en mobile van en fila, en wide van en columna via CSS)
   const scopeRow = el("div", { class: "pt-scoperow" }, [
     el("div", { class: "pt-row pt-scope" },
       [["todo", "Todo"], ["hoy", "Hoy"], ["semana", "Semana"], ["sinfecha", "Sin fecha"]].map(([id, label]) =>
@@ -412,13 +416,61 @@ function renderFilters() {
         }, label)
       )
     ),
-    el("button", {
+    // Botón de filtros: solo en mobile
+    !isWide ? el("button", {
       class: "pt-filterbtn" + (activeFilters() > 0 ? " active" : ""),
       "aria-label": "Abrir filtros",
       onclick: () => openFilters(),
-    }, "\u2699" + (activeFilters() > 0 ? ` ${activeFilters()}` : "")),
+    }, "\u2699" + (activeFilters() > 0 ? ` ${activeFilters()}` : "")) : null,
   ]);
   box.append(scopeRow);
+
+  // En pantallas anchas: mostrar filtros inline dentro del sidebar
+  if (isWide) {
+    // --- Separador ---
+    box.append(el("hr", { style: { border: "none", borderTop: "3px solid var(--wood-d)", margin: "4px 0" } }));
+
+    // --- Categoría ---
+    box.append(el("div", { style: { fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: ".5px", color: "#6A5840", marginBottom: "6px" } }, "Categoría"));
+    const catPills = el("div", { class: "pt-pills", style: { flexWrap: "wrap", gap: "6px" } }, [
+      el("button", { class: "pt-pill", "aria-pressed": String(state.catFilter === "Todo"),
+        style: { minHeight: "36px", fontSize: "12px", padding: "6px 10px" },
+        onclick: () => { state.catFilter = "Todo"; render(); } }, "Todas"),
+      ...state.categories.map((c) =>
+        el("button", {
+          class: "pt-pill tinted", "aria-pressed": String(state.catFilter === c.name),
+          style: Object.assign({ minHeight: "36px", fontSize: "12px", padding: "6px 10px" },
+            state.catFilter === c.name ? { background: c.color } : {}),
+          onclick: () => { state.catFilter = c.name; render(); },
+        }, c.name)
+      ),
+    ]);
+    box.append(catPills);
+
+    box.append(el("hr", { style: { border: "none", borderTop: "3px solid var(--wood-d)", margin: "8px 0" } }));
+
+    // --- Tipo ---
+    box.append(el("div", { style: { fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: ".5px", color: "#6A5840", marginBottom: "6px" } }, "Tipo"));
+    const typePills = el("div", { class: "pt-pills", style: { flexWrap: "wrap", gap: "6px" } }, [
+      el("button", { class: "pt-pill", "aria-pressed": String(state.typeFilter === "todos"),
+        style: { minHeight: "36px", fontSize: "12px", padding: "6px 10px" },
+        onclick: () => { state.typeFilter = "todos"; render(); } }, "Todos"),
+      ...TYPES.map((t) =>
+        el("button", { class: "pt-pill", "aria-pressed": String(state.typeFilter === t.id),
+          style: { minHeight: "36px", fontSize: "12px", padding: "6px 10px" },
+          onclick: () => { state.typeFilter = t.id; render(); } }, t.label)
+      ),
+    ]);
+    box.append(typePills);
+
+    // Botón de configuración completa (abre el drawer)
+    box.append(el("hr", { style: { border: "none", borderTop: "3px solid var(--wood-d)", margin: "8px 0" } }));
+    box.append(el("button", {
+      class: "pt-filterbtn" + (activeFilters() > 0 ? " active" : ""),
+      style: { width: "100%" },
+      onclick: () => openFilters(),
+    }, "\u2699 Más opciones" + (activeFilters() > 0 ? ` (${activeFilters()})` : "")));
+  }
 }
 
 function renderList() {
@@ -909,3 +961,11 @@ function field(labelText, control) {
 
 /* ---------- Arranque ---------- */
 init();
+
+// Re-renderizar filtros al cambiar el tamaño de la ventana
+// (debounce 200ms para no saturar el DOM con eventos)
+let _resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => { render(); }, 200);
+});

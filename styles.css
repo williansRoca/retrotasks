@@ -248,3 +248,166 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pt-xpfill, .pt-card, .pt-sheet, .pt-drawer { animation: none; transition: none; }
 }
+
+/* ============================================================
+ * RESPONSIVO — Tablet (>= 768px)
+ * ============================================================ */
+@media (min-width: 768px) {
+  .pt-app {
+    max-width: 100%;
+  }
+
+  /* El cascaron principal se convierte en una grid de 2 columnas:
+     sidebar de filtros (260px fijo) + área de contenido (resto) */
+  #app {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "header  header"
+      "sidebar content";
+    min-height: 100vh;
+  }
+
+  .pt-header {
+    grid-area: header;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  /* En tablet, la zona de filtros / buscador pasa a ser un sidebar lateral */
+  .pt-filters {
+    grid-area: sidebar;
+    padding: 20px 16px;
+    background:
+      repeating-linear-gradient(90deg, rgba(0,0,0,.04) 0 4px, transparent 4px 8px),
+      var(--soil);
+    border-right: 4px solid var(--wood-d);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: sticky;
+    top: 73px; /* altura del header */
+    align-self: start;
+    max-height: calc(100vh - 73px);
+    overflow-y: auto;
+  }
+
+  /* El scope row pasa a columna en el sidebar */
+  .pt-scoperow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .pt-scoperow .pt-scope {
+    flex-direction: column;
+    gap: 6px;
+    overflow-x: unset;
+    flex-wrap: wrap;
+  }
+
+  .pt-scopechip {
+    text-align: center;
+  }
+
+  .pt-filterbtn {
+    width: 100%;
+  }
+
+  /* La lista principal ocupa el área de contenido */
+  .pt-list {
+    grid-area: content;
+    padding: 16px 20px 100px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    align-content: start;
+  }
+
+  /* Mensaje de estado vacío ocupa ambas columnas */
+  .pt-empty {
+    grid-column: 1 / -1;
+  }
+
+  /* FAB más compacto, alineado al área de contenido */
+  .pt-fab {
+    left: calc(260px + 4px);
+    width: calc(100% - 260px - 4px);
+    max-width: unset;
+    padding: 0 20px;
+  }
+
+  /* Bottom sheet como modal centrado */
+  .pt-overlay {
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .pt-sheet {
+    max-width: 560px;
+    width: 100%;
+    max-height: 88vh;
+    border-top: none;
+    border: 5px solid var(--line);
+    border-radius: 2px;
+    animation: pt-modalin .2s steps(4) both;
+  }
+
+  /* Drawer de filtros un poco más ancho */
+  .pt-drawer {
+    max-width: 340px;
+  }
+
+  /* Toast en tablet también más ancho */
+  .pt-toast-container {
+    max-width: 560px;
+  }
+}
+
+/* ============================================================
+ * RESPONSIVO — Desktop (>= 1100px)
+ * ============================================================ */
+@media (min-width: 1100px) {
+  #app {
+    grid-template-columns: 300px 1fr;
+  }
+
+  .pt-filters {
+    top: 73px;
+  }
+
+  .pt-list {
+    grid-template-columns: repeat(3, 1fr);
+    padding: 20px 28px 100px;
+    gap: 20px;
+  }
+
+  .pt-fab {
+    left: calc(300px + 4px);
+    width: calc(100% - 300px - 4px);
+    padding: 0 28px;
+  }
+
+  .pt-fab button {
+    font-size: 16px;
+  }
+
+  .pt-sheet {
+    max-width: 640px;
+  }
+
+  .pt-toast-container {
+    max-width: 640px;
+  }
+}
+
+/* Animación de entrada para modal en tablet/desktop */
+@keyframes pt-modalin {
+  0% { transform: scale(.96) translateY(8px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
