@@ -34,6 +34,7 @@ const SOUNDS = {
   complete: [[523, 0.0, 0.09], [659, 0.09, 0.09], [784, 0.18, 0.14]], // Do-Mi-Sol
   create: [[440, 0.0, 0.07]],
   delete: [[330, 0.0, 0.06], [220, 0.06, 0.09]],
+  notify: [[587, 0.0, 0.06], [784, 0.06, 0.10]], // Re-Sol
 };
 
 export function playSound(name) {

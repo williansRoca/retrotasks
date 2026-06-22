@@ -41,6 +41,7 @@ const state = {
   isFirebaseConfigured: false,
   syncUnsubscribe: null,
   syncStatusMessage: "",
+  lastDeletedId: null,
 };
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -61,13 +62,134 @@ const el = (tag, props = {}, children = []) => {
 };
 const sfx = (name) => { if (state.soundOn) playSound(name); };
 
+/* ---------- Notificaciones Colaborativas ---------- */
+function requestNotificationPermission() {
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+function sendDesktopNotification(title, message) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(title, {
+        body: message,
+        icon: "./icons/icon-192.png"
+      });
+    } catch (e) {
+      console.warn("Error mostrando notificación de escritorio:", e);
+    }
+  }
+}
+
+function showToast(message) {
+  let container = document.querySelector(".pt-toast-container");
+  if (!container) {
+    container = el("div", { class: "pt-toast-container" });
+    document.body.appendChild(container);
+  }
+
+  const toast = el("div", { class: "pt-toast" }, [
+    el("span", {}, message)
+  ]);
+
+  toast.addEventListener("animationend", (e) => {
+    if (e.animationName === "pt-toast-out") {
+      toast.remove();
+      if (container.children.length === 0) {
+        container.remove();
+      }
+    }
+  });
+
+  container.appendChild(toast);
+}
+
+function notifyEvent(title, message, soundName = "notify") {
+  sfx(soundName);
+  showToast(message);
+  if (document.hidden) {
+    sendDesktopNotification(title, message);
+  }
+}
+
+function detectAndNotifyChanges(oldItems, newItems) {
+  const nickname = (state.syncNickname || "").trim().toLowerCase();
+  
+  // 1. Tareas creadas por otros
+  const added = newItems.filter(n => !oldItems.some(o => o.id === n.id));
+  added.forEach(item => {
+    const creator = item.owner || "Alguien";
+    if (creator.trim().toLowerCase() !== nickname) {
+      notifyEvent(
+        "➕ Tarea nueva",
+        `👤 ${creator} creó: "${item.title}"`,
+        "create"
+      );
+    }
+  });
+
+  // 2. Tareas eliminadas por otros
+  const deleted = oldItems.filter(o => !newItems.some(n => n.id === o.id));
+  deleted.forEach(item => {
+    if (state.lastDeletedId !== item.id) {
+      notifyEvent(
+        "🗑️ Tarea eliminada",
+        `Se eliminó: "${item.title}"`,
+        "delete"
+      );
+    }
+  });
+  state.lastDeletedId = null;
+
+  // 3. Tareas modificadas (completadas/editadas) por otros
+  newItems.forEach(n => {
+    const o = oldItems.find(item => item.id === n.id);
+    if (o) {
+      const updater = n.lastUpdatedBy || n.owner || "Alguien";
+      if (updater.trim().toLowerCase() !== nickname) {
+        if (o.done !== n.done) {
+          if (n.done) {
+            notifyEvent(
+              "✅ Tarea completada",
+              `👤 ${updater} completó: "${n.title}"`,
+              "complete"
+            );
+          } else {
+            notifyEvent(
+              "🔄 Tarea reactivada",
+              `👤 ${updater} desmarcó: "${n.title}"`
+            );
+          }
+        } else if (o.updatedAt !== n.updatedAt) {
+          notifyEvent(
+            "✏️ Tarea editada",
+            `👤 ${updater} editó: "${n.title}"`
+          );
+        }
+      }
+    }
+  });
+}
+
 /* ---------- Carga inicial ---------- */
+let isFirstSync = true;
 function setupFirebaseSubscription(boardId) {
   if (state.syncUnsubscribe) {
     state.syncUnsubscribe();
     state.syncUnsubscribe = null;
   }
+  isFirstSync = true;
   state.syncUnsubscribe = subscribeToBoard(boardId, (items) => {
+    if (isFirstSync) {
+      state.items = items;
+      isFirstSync = false;
+      render();
+      requestNotificationPermission();
+      return;
+    }
+    
+    detectAndNotifyChanges(state.items, items);
     state.items = items;
     render();
   });
@@ -365,8 +487,12 @@ async function toggleDone(id) {
   const isRecurring = willBeDone && item.repeat && item.repeat !== "no" && item.due;
 
   let updated;
-  if (isRecurring) updated = touchItem(item, { due: nextDate(item.due, item.repeat) });
-  else updated = touchItem(item, { done: !item.done });
+  const user = state.syncNickname || "Anónimo";
+  if (isRecurring) {
+    updated = touchItem(item, { due: nextDate(item.due, item.repeat), lastUpdatedBy: user });
+  } else {
+    updated = touchItem(item, { done: !item.done, lastUpdatedBy: user });
+  }
 
   if (state.activeBoardId) {
     await saveSharedItem(state.activeBoardId, updated);
@@ -385,6 +511,7 @@ async function toggleDone(id) {
 async function deleteItem(id) {
   sfx("delete");
   if (state.activeBoardId) {
+    state.lastDeletedId = id; // Evitar disparar notificación de eliminación propia
     await deleteSharedItem(state.activeBoardId, id);
   } else {
     state.items = state.items.filter((i) => i.id !== id);
@@ -394,8 +521,9 @@ async function deleteItem(id) {
 }
 
 async function saveFromSheet(data) {
+  const user = state.syncNickname || "Anónimo";
   if (state.editing) {
-    const updated = touchItem(state.editing, data);
+    const updated = touchItem(state.editing, { ...data, lastUpdatedBy: user });
     if (state.activeBoardId) {
       await saveSharedItem(state.activeBoardId, updated);
     } else {
@@ -403,7 +531,7 @@ async function saveFromSheet(data) {
       await putItem(updated);
     }
   } else {
-    const item = createItem({ ...data, owner: state.syncNickname || "local-user" });
+    const item = createItem({ ...data, owner: user });
     if (state.activeBoardId) {
       await saveSharedItem(state.activeBoardId, item);
     } else {
