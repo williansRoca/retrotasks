@@ -9,7 +9,7 @@
  *  - Listener de cambio de sesión (onAuthStateChanged)
  * ============================================================ */
 
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { initializeApp, getApps } from "./vendor/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -19,14 +19,14 @@ import {
   signOut,
   updateProfile,
   GoogleAuthProvider,
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+} from "./vendor/firebase-auth.js";
 import {
   getFirestore,
   doc,
   setDoc,
   getDoc,
   serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from "./vendor/firebase-firestore.js";
 
 // Importar la config de Firebase desde firebase.js
 import { firebaseConfig } from "./firebase.js";

@@ -25,7 +25,24 @@
   <div id="app" class="pt-app" aria-live="polite"></div>
 
   <!-- Módulo principal (carga auth, theme y el resto de la app) -->
-  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/app.js" id="app-module"></script>
+
+  <!-- Fallback: si el módulo principal no puede cargarse (p. ej. primera
+       visita sin conexión, antes de que exista caché), mostramos un
+       mensaje con opción de reintentar en vez de una pantalla en blanco. -->
+  <script>
+    document.getElementById("app-module").addEventListener("error", () => {
+      const app = document.getElementById("app");
+      if (!app || app.children.length > 0) return;
+      app.innerHTML =
+        '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;padding:24px;text-align:center;font-family:sans-serif;color:#3A2E22;">' +
+        '<div style="font-size:40px;">📡</div>' +
+        '<h1 style="font-size:18px;margin:0;">SIN CONEXIÓN</h1>' +
+        '<p style="font-size:14px;margin:0;max-width:280px;">No se pudo cargar RetroTasks. Revisa tu conexión a internet e inténtalo de nuevo.</p>' +
+        '<button onclick="location.reload()" style="font-size:15px;font-weight:800;padding:12px 24px;background:#FFD24A;color:#3A2E22;border:3px solid #4A3826;box-shadow:3px 3px 0 #7A5230;cursor:pointer;">⟳ REINTENTAR</button>' +
+        '</div>';
+    });
+  </script>
 
   <!-- Manejo de Service Worker (desactivado en Android nativo, activo en Web) -->
   <script>

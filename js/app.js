@@ -40,7 +40,7 @@ import {
 } from "./notifications.js";
 import {
   doc, setDoc, getDoc
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from "./vendor/firebase-firestore.js";
 
 /* ---------- Estado en memoria ---------- */
 const state = {

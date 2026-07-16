@@ -6,7 +6,7 @@
  * ============================================================ */
 
 import { initFirebase } from "./firebase.js";
-import { doc, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { doc, setDoc, arrayUnion } from "./vendor/firebase-firestore.js";
 
 // Inicializa las notificaciones push nativas si está en la plataforma Capacitor
 export async function initPushNotifications(userId) {

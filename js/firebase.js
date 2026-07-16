@@ -9,7 +9,7 @@
  *  - Habilita persistencia offline con caché multitab.
  * ============================================================ */
 
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { initializeApp, getApps } from "./vendor/firebase-app.js";
 import {
   getFirestore,
   doc,
@@ -23,7 +23,7 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from "./vendor/firebase-firestore.js";
 
 // ─── Configuración ───────────────────────────────────────────
 export const firebaseConfig = {

@@ -14,19 +14,38 @@
  *  - Lo demas: network-first con fallback a cache.
  * ============================================================ */
 
-const CACHE_VERSION = "retrotasks-v8";
+const CACHE_VERSION = "retrotasks-v9";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./manifest.json",
   "./js/app.js",
+  "./js/auth.js",
   "./js/db.js",
   "./js/firebase.js",
   "./js/model.js",
+  "./js/notifications.js",
   "./js/sound.js",
+  "./js/theme.js",
+  // Firebase alojado localmente (js/vendor): sin CDN, la app
+  // completa funciona offline y dentro del APK sin red.
+  "./js/vendor/firebase-app.js",
+  "./js/vendor/firebase-auth.js",
+  "./js/vendor/firebase-firestore.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./icons/icon-maskable-512.png",
+  "./icons/avatar-1.png",
+  "./icons/avatar-2.png",
+  "./icons/avatar-3.png",
+  "./icons/avatar-4.png",
+  "./icons/avatar-5.png",
+  "./icons/avatar-6.png",
+  "./icons/avatar-7.png",
+  "./icons/avatar-8.png",
+  "./icons/avatar-9.png",
+  "./icons/avatar-10.png",
 ];
 
 self.addEventListener("install", (event) => {
