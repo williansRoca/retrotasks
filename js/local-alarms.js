@@ -43,6 +43,35 @@ async function ensurePermission(LN) {
   return permissionGranted;
 }
 
+/* Android 12+ difiere las alarmas "inexactas" hasta 1-2 horas para
+ * ahorrar batería. Para que el recordatorio suene puntual hace falta
+ * el acceso especial "Alarmas y recordatorios" (SCHEDULE_EXACT_ALARM,
+ * ya declarado en AndroidManifest). En Android 14+ viene denegado por
+ * defecto: se lo pedimos al usuario UNA sola vez, con opción de abrir
+ * la pantalla de ajustes del sistema. */
+async function ensureExactAlarms(LN) {
+  if (typeof LN.checkExactNotificationSetting !== "function") return;
+  try {
+    const { exact_alarm } = await LN.checkExactNotificationSetting();
+    if (exact_alarm === "granted") return;
+
+    const yaPreguntado = localStorage.getItem("rt-exact-alarm-asked");
+    if (yaPreguntado) return; // no insistir; quedará en modo inexacto
+    localStorage.setItem("rt-exact-alarm-asked", "1");
+
+    const abrir = confirm(
+      "Para que los recordatorios de misiones suenen a la hora exacta, " +
+      "RetroTasks necesita el permiso \"Alarmas y recordatorios\".\n\n" +
+      "¿Abrir los ajustes para activarlo?"
+    );
+    if (abrir) {
+      await LN.changeExactNotificationSetting();
+    }
+  } catch (e) {
+    console.warn("No se pudo verificar el permiso de alarmas exactas:", e);
+  }
+}
+
 // Reprograma todas las alarmas según la lista actual de items.
 async function syncLocalAlarms(items) {
   if (!hasPlugin()) return;
@@ -50,6 +79,7 @@ async function syncLocalAlarms(items) {
 
   try {
     if (!(await ensurePermission(LN))) return;
+    await ensureExactAlarms(LN);
 
     // Cancelar todo lo pendiente (reprogramación total idempotente)
     const pending = await LN.getPending();
