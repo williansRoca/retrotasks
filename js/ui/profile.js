@@ -8,8 +8,9 @@ import { ui } from "../bus.js";
 import { setMeta } from "../db.js";
 import { createItem } from "../model.js";
 import { THEMES, changeTheme } from "../theme.js";
-import { logout } from "../auth.js";
-import { initFirebase, saveUserItem } from "../firebase.js";
+import { logout, deleteAccount } from "../auth.js";
+import { initFirebase, saveUserItem, deleteAllUserData } from "../firebase.js";
+import { showToast } from "./dom.js";
 import { doc, setDoc, getDoc } from "../vendor/firebase-firestore.js";
 import { el } from "./dom.js";
 
@@ -200,10 +201,58 @@ export function renderProfileView(container) {
     }, [
       el("span", { class: "pt-settings-icon", html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter" style="width: 18px; height: 18px; color: var(--red);"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>` }),
       el("span", {}, "Cerrar Sesión")
+    ]),
+    el("button", {
+      class: "pt-settings-item danger",
+      style: { width: '100%' },
+      onclick: () => handleDeleteAccount(),
+    }, [
+      el("span", { class: "pt-settings-icon", html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter" style="width: 18px; height: 18px; color: var(--red);"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>` }),
+      el("span", {}, "Eliminar mi Cuenta")
     ])
   ]);
 
   container.append(title, hero, stats, avatarSec, themeSec, actions);
+}
+
+/* ---------- Eliminación de cuenta (requisito de Google Play) ---------- */
+async function handleDeleteAccount() {
+  if (!state.user) return;
+  if (!navigator.onLine) {
+    showToast("⚠️ Necesitas conexión a internet para eliminar tu cuenta.");
+    return;
+  }
+
+  const aviso = confirm(
+    "⚠️ ELIMINAR CUENTA\n\n" +
+    "Se borrarán PERMANENTEMENTE tu cuenta, todas tus misiones, tu perfil " +
+    "y tus preferencias. Esta acción no se puede deshacer.\n\n¿Continuar?"
+  );
+  if (!aviso) return;
+
+  const escrito = prompt('Para confirmar, escribe: ELIMINAR');
+  if ((escrito || "").trim().toUpperCase() !== "ELIMINAR") {
+    showToast("Eliminación cancelada.");
+    return;
+  }
+
+  showToast("Eliminando tu cuenta...");
+
+  // 1. Borrar datos de Firestore (requiere la sesión aún activa)
+  const dataOk = await deleteAllUserData(state.user.uid);
+  if (!dataOk) {
+    showToast("⚠️ No se pudieron borrar los datos. Revisa tu conexión e inténtalo de nuevo.");
+    return;
+  }
+
+  // 2. Borrar la cuenta de autenticación. watchAuthState detectará el
+  //    cierre de sesión y llevará a la pantalla de login.
+  const { error } = await deleteAccount();
+  if (error) {
+    showToast(`⚠️ ${error}`);
+    return;
+  }
+  showToast("Tu cuenta fue eliminada. ¡Buen viaje, aventurero! ✦");
 }
 
 function createStatCard(value, label) {

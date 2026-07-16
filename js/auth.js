@@ -18,6 +18,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   updateProfile,
+  deleteUser,
   GoogleAuthProvider,
 } from "./vendor/firebase-auth.js";
 import {
@@ -128,6 +129,23 @@ export async function logout() {
     return { error: null };
   } catch (e) {
     return { error: e.message };
+  }
+}
+
+// Elimina la CUENTA de autenticación del usuario actual.
+// Los datos de Firestore deben borrarse ANTES de llamar aquí
+// (las reglas exigen sesión activa para poder borrarlos).
+export async function deleteAccount() {
+  const auth = getAuthInstance();
+  if (!auth.currentUser) return { error: "No hay sesión activa." };
+  try {
+    await deleteUser(auth.currentUser);
+    return { error: null };
+  } catch (e) {
+    if (e.code === "auth/requires-recent-login") {
+      return { error: "Por seguridad, cierra sesión, vuelve a iniciarla y repite la eliminación." };
+    }
+    return { error: friendlyError(e.code) };
   }
 }
 

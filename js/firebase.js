@@ -121,6 +121,26 @@ export function subscribeToUserItems(uid, callback) {
   });
 }
 
+// Borra TODOS los datos del usuario en Firestore: sus items, su
+// documento de perfil y su token de notificaciones. Se usa en la
+// eliminación de cuenta (debe ejecutarse con la sesión aún activa).
+export async function deleteAllUserData(uid) {
+  const firestoreDb = initFirebase();
+  if (!firestoreDb || !uid) return false;
+  try {
+    const itemsSnap = await getDocs(collection(firestoreDb, "users", uid, "items"));
+    for (const d of itemsSnap.docs) {
+      await deleteDoc(d.ref);
+    }
+    await deleteDoc(doc(firestoreDb, "users", uid));
+    await deleteDoc(doc(firestoreDb, "fcmTokens", uid));
+    return true;
+  } catch (e) {
+    console.error("Error al borrar los datos del usuario:", e);
+    return false;
+  }
+}
+
 // ─── Tableros Colaborativos: boards/{boardId}/ ───────────────
 
 export async function checkBoardExists(boardId) {
