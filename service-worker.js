@@ -14,7 +14,7 @@
  *  - Lo demas: network-first con fallback a cache.
  * ============================================================ */
 
-const CACHE_VERSION = "retrotasks-v11";
+const CACHE_VERSION = "retrotasks-v12";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -36,6 +36,7 @@ const APP_SHELL = [
   "./js/ui/alerts.js",
   "./js/ui/auth-screen.js",
   "./js/ui/boards.js",
+  "./js/ui/calendar.js",
   "./js/ui/dom.js",
   "./js/ui/home.js",
   "./js/ui/notify.js",

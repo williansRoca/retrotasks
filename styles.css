@@ -1456,3 +1456,67 @@ input, textarea { font-family: inherit; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================
+ * PESTAÑA AGENDA — Calendario mensual
+ * ============================================================ */
+.pt-cal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 10px;
+}
+.pt-cal-title { font-size: 11px; color: var(--accent); text-align: center; flex: 1; }
+.pt-cal-nav {
+  width: 38px; height: 38px; font-size: 14px; cursor: pointer;
+  background: var(--bg-elevated); color: var(--accent);
+  border: 2px solid var(--border); border-radius: var(--radius);
+}
+.pt-cal-nav:active { transform: translateY(2px); }
+.pt-cal-today {
+  display: block; margin: 0 auto 12px; padding: 5px 14px;
+  font-size: 12px; font-weight: 800; cursor: pointer;
+  background: var(--bg-elevated); color: var(--text-muted);
+  border: 2px solid var(--border); border-radius: var(--radius);
+}
+.pt-cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+  margin-bottom: 16px;
+}
+.pt-cal-dow {
+  font-size: 8px; color: var(--text-muted); text-align: center;
+  padding: 4px 0 6px;
+}
+.pt-cal-day {
+  position: relative; aspect-ratio: 1; min-height: 40px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  background: var(--bg-surface); color: var(--text-primary);
+  border: 2px solid var(--border); border-radius: var(--radius);
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: inherit;
+}
+.pt-cal-day.other { background: transparent; border-color: transparent; cursor: default; }
+.pt-cal-day.today { border-color: var(--accent); color: var(--accent); }
+.pt-cal-day.selected {
+  background: var(--accent); border-color: var(--accent-dim);
+  color: var(--bg-deep);
+}
+.pt-cal-day.selected .pt-cal-num { color: var(--bg-deep); }
+.pt-cal-day.alldone .pt-cal-num { text-decoration: line-through; opacity: .55; }
+.pt-cal-dots { display: flex; gap: 2px; align-items: center; min-height: 6px; }
+.pt-cal-dot {
+  width: 6px; height: 6px; border-radius: 1px;
+  box-shadow: 0 0 3px rgba(0,0,0,.4);
+}
+.pt-cal-more { font-size: 9px; font-weight: 900; color: currentColor; line-height: 1; }
+.pt-cal-dayhead {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 4px 0 10px;
+}
+.pt-cal-dayhead h3 { font-size: 10px; color: var(--accent); margin: 0; }
+.pt-cal-add {
+  padding: 7px 12px; font-size: 12px; font-weight: 800; cursor: pointer;
+  background: var(--accent); color: var(--bg-deep);
+  border: 2px solid var(--accent-dim); border-radius: var(--radius);
+  box-shadow: 0 3px 0 var(--accent-dim);
+}
+.pt-cal-add:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--accent-dim); }
+.pt-cal-daylist { display: flex; flex-direction: column; gap: 12px; }

@@ -57,6 +57,7 @@ export function createItem(data) {
     detail: (data.detail || "").trim(),
     due: data.due || "",
     repeat: data.repeat || "no",
+    preAlert: data.preAlert || "no", // minutos de aviso previo: no|10|30|60|1440
     done: false,
     createdAt: now,
     updatedAt: now,

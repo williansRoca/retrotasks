@@ -98,7 +98,7 @@ export function renderAuthScreen(container) {
 
   const view = el("div", { class: "pt-auth" }, [
     // Imagen del guerrero pixel art
-    el("img", { class: "pt-auth-hero", src: "./icons/icon-192.png", alt: "RetroTasks Hero" }),
+    el("img", { class: "pt-auth-hero", src: "./icons/hero.png", alt: "RetroTasks Hero" }),
     el("h1", { class: "pt-auth-logo pt-pixel" }, "RETROTASKS"),
     el("p", { class: "pt-auth-sub pt-pixel", style: { fontSize: '9px' } }, "Tu aventura del día"),
     googleBtn,

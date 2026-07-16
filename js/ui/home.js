@@ -48,7 +48,7 @@ export function renderHomeList() {
 }
 
 /* ---------- Tarjeta individual con gestos swipe ---------- */
-function renderCard(it) {
+export function renderCard(it) {
   const prio = PRIORITIES.find((p) => p.id === it.priority);
   const due = dueStatus(it.due, it.done);
   const typeLabel = TYPES.find((t) => t.id === it.type)?.label;

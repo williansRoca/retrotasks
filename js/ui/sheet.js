@@ -14,7 +14,19 @@ import { saveItem, addCategory } from "../store.js";
 const TITLE_MAX = 500;
 const DETAIL_MAX = 5000;
 
-export function openSheet(item) {
+// Opciones de aviso previo (minutos antes del vencimiento)
+const PRE_ALERTS = [
+  { id: "no", label: "Sin aviso" },
+  { id: "10", label: "10 min antes" },
+  { id: "30", label: "30 min antes" },
+  { id: "60", label: "1 h antes" },
+  { id: "1440", label: "1 día antes" },
+];
+
+let _defaults = {}; // valores iniciales para creación (p. ej. fecha desde la Agenda)
+
+export function openSheet(item, defaults = {}) {
+  _defaults = defaults;
   state.editing = item;
   state.sheetOpen = true;
   renderSheet();
@@ -45,8 +57,9 @@ function renderSheet() {
     priority: init?.priority || "media",
     title: init?.title || "",
     detail: init?.detail || "",
-    due: init?.due || "",
+    due: init?.due || _defaults.due || "",
     repeat: init?.repeat || "no",
+    preAlert: init?.preAlert || "no",
   };
   let cats = [...state.categories];
 
@@ -163,6 +176,17 @@ function renderSheet() {
             : null,
         ]);
         sheet.append(field("Frecuencia", rep));
+
+        // Aviso previo (segunda notificación antes del vencimiento)
+        const pre = el("div", {}, [
+          el("div", { class: "pt-pills" }, PRE_ALERTS.map((a) =>
+            el("button", { class: "pt-pill", "aria-pressed": String(form.preAlert === a.id),
+              onclick: () => { form.preAlert = a.id; build(); } }, a.label))),
+          form.preAlert !== "no"
+            ? el("div", { class: "pt-hint" }, "Recibirás una notificación antes de la fecha límite, además de la del vencimiento.")
+            : null,
+        ]);
+        sheet.append(field("Aviso Previo", pre));
       }
     }
 
@@ -175,6 +199,7 @@ function renderSheet() {
         title: form.title, detail: form.detail,
         due: form.type === "nota" ? "" : form.due,
         repeat: form.type !== "nota" && form.due ? form.repeat : "no",
+        preAlert: form.type !== "nota" && form.due ? form.preAlert : "no",
       });
       closeSheet();
       ui.render();

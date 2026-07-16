@@ -89,20 +89,41 @@ async function syncLocalAlarms(items) {
       });
     }
 
-    // Programar las misiones pendientes con fecha límite futura
+    // Programar las misiones pendientes con fecha límite futura.
+    // Cada misión puede generar hasta 2 notificaciones: el aviso
+    // previo (si está configurado) y la del vencimiento.
     const now = Date.now();
-    const notifications = items
+    const etiquetaPrevio = { "10": "10 minutos", "30": "30 minutos", "60": "1 hora", "1440": "1 día" };
+
+    const notifications = [];
+    items
       .filter((i) => i.type !== "nota" && i.due && !i.done)
       .map((i) => ({ item: i, at: new Date(i.due).getTime() }))
       .filter(({ at }) => !isNaN(at) && at > now)
       .sort((a, b) => a.at - b.at)
-      .slice(0, 60) // margen prudente frente a límites del sistema
-      .map(({ item, at }) => ({
-        id: numericId(item.id),
-        title: "🚨 RetroTasks: Misión por vencer",
-        body: `¡El tiempo límite para "${item.title}" ha llegado!`,
-        schedule: { at: new Date(at), allowWhileIdle: true },
-      }));
+      .slice(0, 30) // margen prudente frente a límites del sistema
+      .forEach(({ item, at }) => {
+        // Aviso previo configurado por el usuario
+        const preMin = parseInt(item.preAlert, 10);
+        if (preMin > 0) {
+          const preAt = at - preMin * 60000;
+          if (preAt > now) {
+            notifications.push({
+              id: numericId(item.id + "::pre"),
+              title: "⏳ RetroTasks: Misión próxima",
+              body: `"${item.title}" vence en ${etiquetaPrevio[item.preAlert] || `${preMin} min`}.`,
+              schedule: { at: new Date(preAt), allowWhileIdle: true },
+            });
+          }
+        }
+        // Notificación del vencimiento
+        notifications.push({
+          id: numericId(item.id),
+          title: "🚨 RetroTasks: Misión por vencer",
+          body: `¡El tiempo límite para "${item.title}" ha llegado!`,
+          schedule: { at: new Date(at), allowWhileIdle: true },
+        });
+      });
 
     if (notifications.length) {
       await LN.schedule({ notifications });

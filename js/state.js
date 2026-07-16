@@ -20,7 +20,12 @@ export const state = {
   items: [],
   categories: DEFAULT_CATEGORIES,
   soundOn: false,
-  activeTab: "home", // home | boards | alerts | profile
+  activeTab: "home", // home | calendar | boards | alerts | profile
+
+  // Calendario (pestaña Agenda)
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(), // 0-11
+  calSelected: null, // "YYYY-MM-DD" del día seleccionado
 
   // Filtros
   catFilter: "Todo",

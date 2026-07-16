@@ -11,6 +11,7 @@ import { playSound } from "../sound.js";
 import { $, el } from "./dom.js";
 import { openSheet } from "./sheet.js";
 import { renderFilters, renderHomeList } from "./home.js";
+import { renderCalendarView } from "./calendar.js";
 import { renderBoardsView } from "./boards.js";
 import { renderAlertsView } from "./alerts.js";
 import { renderProfileView } from "./profile.js";
@@ -78,6 +79,7 @@ export function renderShell() {
   // Barra de navegación inferior con íconos vectoriales SVG
   const nav = el("nav", { class: "pt-bottom-nav" }, [
     createNavItem("home", `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"><path d="M4 11V20H9V15H15V20H20V11L12 4L4 11Z"/></svg>`, "Inicio"),
+    createNavItem("calendar", `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"><path d="M3 5H21V21H3V5ZM3 9H21M8 3V7M16 3V7M7 13H9M11 13H13M15 13H17M7 17H9M11 17H13"/></svg>`, "Agenda"),
     createNavItem("boards", `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"><path d="M3 3H10V10H3V3ZM14 3H21V10H14V3ZM14 14H21V21H14V14ZM3 14H10V21H3V14Z"/></svg>`, "Tableros"),
     createNavItem("alerts", `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"><path d="M12 2C8 2 5 5 5 9V17H3V19H21V17H19V9C19 5 16 2 12 2ZM10 21C10 22 11 23 12 23C13 23 14 22 14 21H10Z"/></svg>`, "Alertas", state.alerts.length),
     createNavItem("profile", `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"><path d="M12 2C9.8 2 8 3.8 8 6C8 8.2 9.8 10 12 10C14.2 10 16 8.2 16 6C16 3.8 14.2 2 12 2ZM6 20C6 16.7 8.7 14 12 14C15.3 14 18 16.7 18 20V22H6V20Z"/></svg>`, "Perfil")
@@ -131,7 +133,9 @@ export function render() {
     // Si no estamos en Home, vaciar y ocultar sección de filtros móviles
     if (!isWide) filters.style.display = "none";
 
-    if (state.activeTab === "boards") {
+    if (state.activeTab === "calendar") {
+      renderCalendarView(list);
+    } else if (state.activeTab === "boards") {
       renderBoardsView(list);
     } else if (state.activeTab === "alerts") {
       renderAlertsView(list);
