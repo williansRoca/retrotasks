@@ -1,0 +1,14 @@
+{
+	"appId": "com.retrotasks.app",
+	"appName": "RetroTasks",
+	"webDir": "www",
+	"plugins": {
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"alert"
+			]
+		}
+	}
+}

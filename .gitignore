@@ -1,0 +1,18 @@
+# Dependencias
+node_modules/
+
+# Carpeta generada por scripts/copy-www.mjs (Capacitor webDir)
+www/
+
+# Claves y credenciales de firma — NUNCA subir
+*.jks
+*.keystore
+key.properties
+
+# Config de Firebase para Android (descargar de Firebase Console)
+google-services.json
+
+# Builds
+android/app/build/
+android/build/
+android/.gradle/

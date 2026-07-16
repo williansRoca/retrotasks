@@ -1,11 +1,46 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /boards/{boardId} {
-      allow read, write: if true;
-      
+
+    // ─── Datos personales: solo el dueño de la cuenta ─────────
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
       match /items/{itemId} {
-        allow read, write: if true;
+        allow read, delete: if request.auth != null && request.auth.uid == userId;
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 1
+          && request.resource.data.title.size() <= 200
+          && request.resource.data.detail is string
+          && request.resource.data.detail.size() <= 2000;
+      }
+    }
+
+    // ─── Tokens FCM: solo el dueño puede registrar su dispositivo ─
+    match /fcmTokens/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── Tableros colaborativos: requieren sesión iniciada ────
+    match /boards/{boardId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.creator is string
+        && request.resource.data.creator.size() >= 1
+        && request.resource.data.creator.size() <= 50;
+      // El documento del tablero no se edita ni borra desde el cliente.
+      allow update, delete: if false;
+
+      match /items/{itemId} {
+        allow read, delete: if request.auth != null;
+        allow create, update: if request.auth != null
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 1
+          && request.resource.data.title.size() <= 200
+          && request.resource.data.detail is string
+          && request.resource.data.detail.size() <= 2000;
       }
     }
   }

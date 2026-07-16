@@ -1,0 +1,19 @@
+{
+  "name": "retrotasks",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Gestor de tareas, notas y recordatorios con estilo pixel-RPG (PWA + Capacitor Android)",
+  "scripts": {
+    "copy:www": "node scripts/copy-www.mjs",
+    "sync:android": "npm run copy:www && npx cap sync android",
+    "open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/push-notifications": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}

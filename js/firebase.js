@@ -1,33 +1,32 @@
 /* ============================================================
- * firebase.js — Capa de sincronización cooperativa en tiempo real
+ * firebase.js — Capa de datos Firebase de RetroTasks v2
  *
- * DETALLE DE DISEÑO:
- *  - Se conecta a Firebase Firestore usando ESM desde CDN para 
- *    mantener la compatibilidad con GitHub Pages sin requerir
- *    herramientas de compilación adicionales.
- *  - Habilita la persistencia local multientrada nativa para
- *    soporte sin conexión inmediato.
+ * CAMBIOS v2:
+ *  - Exporta firebaseConfig para que auth.js pueda reutilizarlo.
+ *  - Añade funciones para leer/escribir items en la colección
+ *    personal del usuario: users/{uid}/items/{itemId}
+ *  - Mantiene las funciones de tableros colaborativos.
+ *  - Habilita persistencia offline con caché multitab.
  * ============================================================ */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
   getFirestore,
   doc,
   setDoc,
   deleteDoc,
+  getDocs,
   collection,
   onSnapshot,
   getDoc,
   query,
   initializeFirestore,
   persistentLocalCache,
-  persistentMultipleTabManager
+  persistentMultipleTabManager,
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// CONFIGURACIÓN DE FIREBASE
-// Reemplaza este objeto con las credenciales de tu proyecto de Firebase Console.
-// Las puedes obtener en: https://console.firebase.google.com/
-const firebaseConfig = {
+// ─── Configuración ───────────────────────────────────────────
+export const firebaseConfig = {
   apiKey: "AIzaSyDxxnGbwQhqC-bJfoEwqfTsQmJMpLlBcqI",
   authDomain: "retrotasks-903c9.firebaseapp.com",
   databaseURL: "https://retrotasks-903c9-default-rtdb.firebaseio.com",
@@ -37,61 +36,109 @@ const firebaseConfig = {
   appId: "1:263400038199:web:3dadcf228027e1d82404b2"
 };
 
-let app = null;
 let db = null;
 
-// Verifica si las credenciales por defecto han sido editadas.
-export function isFirebaseConfigured() {
-  return firebaseConfig && 
-         firebaseConfig.projectId && 
-         firebaseConfig.projectId !== "TU_PROJECT_ID" && 
-         firebaseConfig.apiKey !== "TU_API_KEY";
-}
-
-// Inicializa Firebase y activa el soporte offline (persistencia local).
+// ─── Inicialización ───────────────────────────────────────────
 export function initFirebase() {
-  if (!isFirebaseConfigured()) {
-    return null;
-  }
   if (db) return db;
-
   try {
-    app = initializeApp(firebaseConfig);
+    const app = getApps().length
+      ? getApps()[0]
+      : initializeApp(firebaseConfig);
+
     db = initializeFirestore(app, {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()
       })
     });
-    console.log("Firebase & Firestore inicializados con caché offline persistente.");
+    console.log("Firestore inicializado con caché offline.");
   } catch (error) {
     console.error("Error al inicializar Firebase:", error);
   }
   return db;
 }
 
-// Verifica si un código de tablero ya existe en Firestore
+export function isFirebaseConfigured() {
+  return !!(firebaseConfig?.projectId);
+}
+
+// ─── Items Personales: users/{uid}/items/ ────────────────────
+
+// Obtiene todos los items personales del usuario
+export async function getUserItems(uid) {
+  const firestoreDb = initFirebase();
+  if (!firestoreDb || !uid) return [];
+  try {
+    const snap = await getDocs(
+      collection(firestoreDb, "users", uid, "items")
+    );
+    return snap.docs.map(d => d.data());
+  } catch (e) {
+    console.error("Error al obtener items del usuario:", e);
+    return [];
+  }
+}
+
+// Guarda o actualiza un item personal
+export async function saveUserItem(uid, item) {
+  const firestoreDb = initFirebase();
+  if (!firestoreDb || !uid) return;
+  try {
+    const ref = doc(firestoreDb, "users", uid, "items", item.id);
+    await setDoc(ref, item);
+  } catch (e) {
+    console.error("Error al guardar item:", e);
+  }
+}
+
+// Elimina un item personal
+export async function deleteUserItem(uid, itemId) {
+  const firestoreDb = initFirebase();
+  if (!firestoreDb || !uid) return;
+  try {
+    const ref = doc(firestoreDb, "users", uid, "items", itemId);
+    await deleteDoc(ref);
+  } catch (e) {
+    console.error("Error al eliminar item:", e);
+  }
+}
+
+// Suscripción en tiempo real a los items del usuario
+export function subscribeToUserItems(uid, callback) {
+  const firestoreDb = initFirebase();
+  if (!firestoreDb || !uid) return () => {};
+  const q = query(collection(firestoreDb, "users", uid, "items"));
+  return onSnapshot(q, (snapshot) => {
+    const items = snapshot.docs.map(d => d.data());
+    callback(items);
+  }, (error) => {
+    console.error("Error en suscripción de items:", error);
+  });
+}
+
+// ─── Tableros Colaborativos: boards/{boardId}/ ───────────────
+
 export async function checkBoardExists(boardId) {
   const firestoreDb = initFirebase();
   if (!firestoreDb) return false;
   try {
-    const boardRef = doc(firestoreDb, "boards", boardId);
-    const docSnap = await getDoc(boardRef);
-    return docSnap.exists();
+    const snap = await getDoc(doc(firestoreDb, "boards", boardId));
+    return snap.exists();
   } catch (e) {
-    console.error("Error comprobando existencia del tablero:", e);
+    console.error("Error comprobando tablero:", e);
     return false;
   }
 }
 
-// Crea un nuevo tablero en Firestore con metadatos iniciales
-export async function createBoard(boardId, creatorName) {
+export async function createBoard(boardId, creatorName, creatorId) {
   const firestoreDb = initFirebase();
   if (!firestoreDb) return false;
   try {
-    const boardRef = doc(firestoreDb, "boards", boardId);
-    await setDoc(boardRef, {
+    await setDoc(doc(firestoreDb, "boards", boardId), {
       createdAt: new Date().toISOString(),
-      creator: (creatorName || "").trim() || "Anónimo"
+      creator: (creatorName || "").trim() || "Anónimo",
+      creatorId: creatorId || null,
+      members: [{ userId: creatorId, nickname: creatorName, joinedAt: new Date().toISOString() }],
     });
     return true;
   } catch (e) {
@@ -100,45 +147,36 @@ export async function createBoard(boardId, creatorName) {
   }
 }
 
-// Guarda o actualiza un item (tarea, nota, recordatorio) en el tablero compartido
 export async function saveSharedItem(boardId, item) {
   const firestoreDb = initFirebase();
   if (!firestoreDb) return;
   try {
-    const itemRef = doc(firestoreDb, "boards", boardId, "items", item.id);
-    await setDoc(itemRef, item);
+    const ref = doc(firestoreDb, "boards", boardId, "items", item.id);
+    await setDoc(ref, item);
   } catch (e) {
     console.error("Error guardando item cooperativo:", e);
   }
 }
 
-// Elimina un item del tablero compartido
 export async function deleteSharedItem(boardId, itemId) {
   const firestoreDb = initFirebase();
   if (!firestoreDb) return;
   try {
-    const itemRef = doc(firestoreDb, "boards", boardId, "items", itemId);
-    await deleteDoc(itemRef);
+    const ref = doc(firestoreDb, "boards", boardId, "items", itemId);
+    await deleteDoc(ref);
   } catch (e) {
     console.error("Error eliminando item cooperativo:", e);
   }
 }
 
-// Se suscribe en tiempo real a los cambios de un tablero
-// Ejecuta callback cada vez que hay cambios y devuelve la función para desuscribirse
 export function subscribeToBoard(boardId, callback) {
   const firestoreDb = initFirebase();
   if (!firestoreDb) return () => {};
-
   const q = query(collection(firestoreDb, "boards", boardId, "items"));
-  
   return onSnapshot(q, (snapshot) => {
-    const items = [];
-    snapshot.forEach((docSnap) => {
-      items.push(docSnap.data());
-    });
+    const items = snapshot.docs.map(d => d.data());
     callback(items);
   }, (error) => {
-    console.error("Error en la suscripción a Firestore:", error);
+    console.error("Error en suscripción de tablero:", error);
   });
 }

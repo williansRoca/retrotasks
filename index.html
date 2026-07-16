@@ -1,35 +1,56 @@
 <!DOCTYPE html>
-<html lang="es-CL">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>RetroTasks</title>
-  <meta name="description" content="Gestor de tareas, notas y recordatorios con estilo pixel." />
+  <meta name="description" content="Tu gestor de tareas, notas y recordatorios con estilo retro moderno." />
 
   <!-- PWA -->
   <link rel="manifest" href="./manifest.json" />
-  <meta name="theme-color" content="#D9A86C" />
+  <meta name="theme-color" content="#FFD24A" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="RetroTasks" />
+
+  <!-- Capacitor: se inyecta automáticamente en Android -->
+  <!-- El script capacitor.js solo existe en el contexto de Android/iOS -->
 
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <!-- La interfaz completa se construye desde app.js -->
-  <main id="app" class="pt-app" aria-live="polite"></main>
+  <!-- La interfaz completa se construye dinámicamente desde app.js -->
+  <!-- Dependiendo del estado de Auth, muestra la pantalla de login o la app principal -->
+  <div id="app" class="pt-app" aria-live="polite"></div>
 
-  <!-- Modulos ES: app.js importa db.js, model.js y sound.js -->
+  <!-- Módulo principal (carga auth, theme y el resto de la app) -->
   <script type="module" src="./js/app.js"></script>
 
-  <!-- Registro del Service Worker (offline + instalacion) -->
+  <!-- Manejo de Service Worker (desactivado en Android nativo, activo en Web) -->
   <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./service-worker.js")
-          .catch((err) => console.warn("SW no registrado:", err));
-      });
+    // En Android/iOS nativo, los archivos ya están integrados en la app, 
+    // no se necesita Service Worker para el offline y puede causar problemas de caché.
+    const isNative = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || 
+                     (navigator.userAgent.includes("Android") && window.location.href.startsWith("http://localhost"));
+
+    if (isNative) {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (let registration of registrations) {
+            registration.unregister().then(function() {
+              console.log("Service Worker nativo desinstalado con éxito para evitar problemas de caché.");
+            });
+          }
+        });
+      }
+    } else {
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./service-worker.js")
+            .catch((err) => console.warn("SW no registrado:", err));
+        });
+      }
     }
   </script>
 </body>
