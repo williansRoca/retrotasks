@@ -25,6 +25,7 @@ import {
 } from "./firebase.js";
 import { sfx, showToast, pulseCard, createXpParticles } from "./ui/dom.js";
 import { detectAndNotifyChanges } from "./ui/notify.js";
+import { scheduleLocalAlarms } from "./local-alarms.js";
 
 /* ---------- Persistencia unificada ---------- */
 
@@ -124,6 +125,7 @@ export function setupUserItemsSubscription(uid) {
   state.userItemsUnsubscribe = subscribeToUserItems(uid, (items) => {
     if (!state.activeBoardId) {
       state.items = items;
+      scheduleLocalAlarms(state.items);
       ui.render();
     }
   });
@@ -140,6 +142,7 @@ export function setupBoardSubscription(boardId) {
     if (isFirstSync) {
       state.items = items;
       isFirstSync = false;
+      scheduleLocalAlarms(state.items);
       ui.render();
       return;
     }
@@ -147,6 +150,7 @@ export function setupBoardSubscription(boardId) {
     // Si hay cambios de otros, notificar en tiempo real
     detectAndNotifyChanges(state.items, items);
     state.items = items;
+    scheduleLocalAlarms(state.items);
     ui.render();
   });
 }
@@ -213,5 +217,6 @@ export async function disconnectBoard() {
   } else {
     state.items = [];
   }
+  scheduleLocalAlarms(state.items);
   ui.render();
 }
