@@ -79,27 +79,32 @@ export async function getUserItems(uid) {
   }
 }
 
-// Guarda o actualiza un item personal
+// Guarda o actualiza un item personal. Devuelve true si tuvo éxito,
+// para que la interfaz pueda avisar cuando una escritura falla.
 export async function saveUserItem(uid, item) {
   const firestoreDb = initFirebase();
-  if (!firestoreDb || !uid) return;
+  if (!firestoreDb || !uid) return false;
   try {
     const ref = doc(firestoreDb, "users", uid, "items", item.id);
     await setDoc(ref, item);
+    return true;
   } catch (e) {
     console.error("Error al guardar item:", e);
+    return false;
   }
 }
 
-// Elimina un item personal
+// Elimina un item personal. Devuelve true si tuvo éxito.
 export async function deleteUserItem(uid, itemId) {
   const firestoreDb = initFirebase();
-  if (!firestoreDb || !uid) return;
+  if (!firestoreDb || !uid) return false;
   try {
     const ref = doc(firestoreDb, "users", uid, "items", itemId);
     await deleteDoc(ref);
+    return true;
   } catch (e) {
     console.error("Error al eliminar item:", e);
+    return false;
   }
 }
 
@@ -149,23 +154,27 @@ export async function createBoard(boardId, creatorName, creatorId) {
 
 export async function saveSharedItem(boardId, item) {
   const firestoreDb = initFirebase();
-  if (!firestoreDb) return;
+  if (!firestoreDb) return false;
   try {
     const ref = doc(firestoreDb, "boards", boardId, "items", item.id);
     await setDoc(ref, item);
+    return true;
   } catch (e) {
     console.error("Error guardando item cooperativo:", e);
+    return false;
   }
 }
 
 export async function deleteSharedItem(boardId, itemId) {
   const firestoreDb = initFirebase();
-  if (!firestoreDb) return;
+  if (!firestoreDb) return false;
   try {
     const ref = doc(firestoreDb, "boards", boardId, "items", itemId);
     await deleteDoc(ref);
+    return true;
   } catch (e) {
     console.error("Error eliminando item cooperativo:", e);
+    return false;
   }
 }
 
