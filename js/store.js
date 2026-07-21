@@ -19,13 +19,15 @@ import { ui } from "./bus.js";
 import { setActiveBoardId, setMeta } from "./db.js";
 import { createItem, touchItem, nextDate, PALETTE } from "./model.js";
 import {
-  checkBoardExists, createBoard, getUserItems,
+  checkBoardExists, createBoard, deleteBoard, getUserItems, getBoardInfo,
+  getUserBoards, setUserBoards,
   saveSharedItem, deleteSharedItem, subscribeToBoard,
   saveUserItem, deleteUserItem, subscribeToUserItems,
 } from "./firebase.js";
-import { sfx, showToast, pulseCard, createXpParticles } from "./ui/dom.js";
+import { sfx, showToast, showActionToast, pulseCard, createXpParticles } from "./ui/dom.js";
 import { detectAndNotifyChanges } from "./ui/notify.js";
 import { scheduleLocalAlarms } from "./local-alarms.js";
+import { settings } from "./settings.js";
 
 /* ---------- Persistencia unificada ---------- */
 
@@ -89,10 +91,49 @@ export function toggleDone(id) {
   }
 }
 
+// Marca o desmarca un objetivo de la checklist de una misión.
+export function toggleChecklistItem(itemId, checkId) {
+  const item = state.items.find((i) => i.id === itemId);
+  if (!item || !Array.isArray(item.checklist)) return;
+
+  const checklist = item.checklist.map((c) =>
+    c.id === checkId ? { ...c, done: !c.done } : c
+  );
+  const updated = touchItem(item, {
+    checklist,
+    lastUpdatedBy: state.syncNickname || "Anónimo",
+  });
+
+  // Respuesta inmediata en pantalla; la nube confirma después.
+  state.items = state.items.map((i) => (i.id === itemId ? updated : i));
+  ui.render();
+
+  sfx("complete");
+  persistItem(updated);
+}
+
 export function deleteItem(id) {
   const item = state.items.find((i) => i.id === id);
+
+  // Preferencia de accesibilidad: confirmar antes de eliminar
+  if (settings.confirmDelete && item) {
+    const ok = window.confirm(`¿Eliminar "${item.title}"?`);
+    if (!ok) {
+      ui.render(true); // restaura la tarjeta si venía de un deslizamiento
+      return;
+    }
+  }
+
   sfx("delete");
   unpersistItem(id, item?.title);
+
+  // Red de seguridad: permitir restaurar la misión recién borrada.
+  if (item) {
+    showActionToast(`🗑️ "${item.title}" eliminada`, "Deshacer", () => {
+      persistItem(item);
+      showToast("Misión restaurada ✦");
+    });
+  }
 }
 
 // Crea o actualiza desde el formulario. Devuelve el item persistido.
@@ -157,27 +198,68 @@ export function setupBoardSubscription(boardId) {
 
 /* ---------- Tableros colaborativos ---------- */
 
+// Límites (ver también LIMITES en la pantalla de tableros)
+export const MAX_BOARDS = 10;
+
 function makeBoardId() {
   return "RT-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-export async function handleCreateBoard() {
+// Carga las membresías del usuario al iniciar sesión.
+export async function loadUserBoards(uid) {
+  state.boards = await getUserBoards(uid);
+  return state.boards;
+}
+
+async function saveMemberships() {
+  if (state.user) await setUserBoards(state.user.uid, state.boards);
+}
+
+/* Cambia de espacio de trabajo SIN abandonar ningún tablero:
+ * boardId = null  → espacio personal
+ * boardId = "RT-…" → ese tablero compartido */
+export async function switchWorkspace(boardId) {
+  if (state.syncUnsubscribe) {
+    state.syncUnsubscribe();
+    state.syncUnsubscribe = null;
+  }
+  state.activeBoardId = boardId;
+  await setActiveBoardId(boardId);
+
+  if (boardId) {
+    state.items = [];       // evita mostrar las misiones del espacio anterior
+    ui.render();
+    setupBoardSubscription(boardId);
+  } else {
+    state.items = state.user ? await getUserItems(state.user.uid) : [];
+    scheduleLocalAlarms(state.items);
+    ui.render();
+  }
+}
+
+export async function handleCreateBoard(boardName) {
   if (!state.syncNickname.trim()) {
-    alert("Por favor, ingresa tu apodo primero.");
+    showToast("⚠️ Necesitas un nombre de perfil para crear un tablero.");
     return;
   }
+  if (state.boards.length >= MAX_BOARDS) {
+    showToast(`⚠️ Alcanzaste el máximo de ${MAX_BOARDS} tableros. Abandona uno para crear otro.`);
+    return;
+  }
+  const name = (boardName || "").trim() || "Tablero compartido";
   const newBoardId = makeBoardId();
   state.syncStatusMessage = "Creando tablero...";
   ui.render();
 
-  const success = await createBoard(newBoardId, state.syncNickname, state.user?.uid);
+  const success = await createBoard(newBoardId, state.syncNickname, state.user?.uid, name);
   if (success) {
-    state.activeBoardId = newBoardId;
-    await setActiveBoardId(newBoardId);
+    state.boards = [...state.boards, { id: newBoardId, name }];
+    await saveMemberships();
     state.syncStatusMessage = "";
-    setupBoardSubscription(newBoardId);
+    await switchWorkspace(newBoardId);
+    showToast(`🤝 Tablero "${name}" creado. Código: ${newBoardId}`);
   } else {
-    state.syncStatusMessage = "Error al crear tablero en Firebase.";
+    state.syncStatusMessage = "Error al crear el tablero. Revisa tu conexión.";
   }
   ui.render();
 }
@@ -185,38 +267,68 @@ export async function handleCreateBoard() {
 export async function handleJoinBoard(boardIdInput) {
   const bId = (boardIdInput || "").trim().toUpperCase();
   if (!bId) {
-    alert("Por favor, ingresa un código de tablero.");
+    showToast("⚠️ Ingresa un código de tablero.");
+    return;
+  }
+  if (state.boards.some((b) => b.id === bId)) {
+    showToast("Ya perteneces a ese tablero.");
+    await switchWorkspace(bId);
+    return;
+  }
+  if (state.boards.length >= MAX_BOARDS) {
+    showToast(`⚠️ Alcanzaste el máximo de ${MAX_BOARDS} tableros.`);
     return;
   }
   state.syncStatusMessage = "Buscando tablero...";
   ui.render();
 
-  const exists = await checkBoardExists(bId);
-  if (exists) {
-    state.activeBoardId = bId;
-    await setActiveBoardId(bId);
+  const info = await getBoardInfo(bId);
+  if (info) {
+    state.boards = [...state.boards, { id: bId, name: info.name || bId }];
+    await saveMemberships();
     state.syncStatusMessage = "";
-    setupBoardSubscription(bId);
+    await switchWorkspace(bId);
+    showToast(`🤝 Te uniste a "${info.name || bId}"`);
   } else {
     state.syncStatusMessage = "El código de tablero no existe.";
   }
   ui.render();
 }
 
-// Detiene la sincronización colaborativa y vuelve al modo personal
-export async function disconnectBoard() {
-  if (state.syncUnsubscribe) {
-    state.syncUnsubscribe();
-    state.syncUnsubscribe = null;
-  }
-  state.activeBoardId = null;
-  await setActiveBoardId(null);
-
-  if (state.user) {
-    state.items = await getUserItems(state.user.uid);
+// Abandona un tablero: lo quita de las membresías del usuario.
+// Las misiones del tablero permanecen para el resto de participantes.
+export async function leaveBoard(boardId) {
+  state.boards = state.boards.filter((b) => b.id !== boardId);
+  await saveMemberships();
+  if (state.activeBoardId === boardId) {
+    await switchWorkspace(null);
   } else {
-    state.items = [];
+    ui.render();
   }
-  scheduleLocalAlarms(state.items);
-  ui.render();
+}
+
+/* Elimina el tablero para TODOS (solo el creador puede).
+ * Si el servidor lo rechaza, se conserva la membresía. */
+export async function removeBoardForEveryone(boardId) {
+  const { ok, error } = await deleteBoard(boardId);
+  if (!ok) {
+    showToast(`⚠️ ${error}`);
+    return false;
+  }
+  await leaveBoard(boardId);
+  showToast("Tablero eliminado para todos los participantes.");
+  return true;
+}
+
+// ¿El usuario actual creó este tablero? Se consulta al servidor.
+export async function isBoardCreator(boardId) {
+  const info = await getBoardInfo(boardId);
+  return !!(info && state.user && info.creatorId === state.user.uid);
+}
+
+// Nombre legible del espacio activo (para la cabecera)
+export function activeWorkspaceName() {
+  if (!state.activeBoardId) return "Personal";
+  const b = state.boards.find((x) => x.id === state.activeBoardId);
+  return b ? b.name : state.activeBoardId;
 }

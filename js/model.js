@@ -58,6 +58,8 @@ export function createItem(data) {
     due: data.due || "",
     repeat: data.repeat || "no",
     preAlert: data.preAlert || "no", // minutos de aviso previo: no|10|30|60|1440
+    // Lista de objetivos: [{ id, text, done }]
+    checklist: Array.isArray(data.checklist) ? data.checklist : [],
     done: false,
     createdAt: now,
     updatedAt: now,
@@ -78,6 +80,24 @@ export function touchItem(item, changes) {
     updatedAt: new Date().toISOString(),
     syncStatus: item.syncStatus === "synced" ? "pending" : item.syncStatus,
   };
+}
+
+/* ---------- Checklist (objetivos de una misión) ---------- */
+
+export function makeChecklistItem(text) {
+  return {
+    id: "chk-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    text: (text || "").trim(),
+    done: false,
+  };
+}
+
+// Progreso de la lista: { done, total, pct } o null si no tiene.
+export function checklistProgress(item) {
+  const list = Array.isArray(item?.checklist) ? item.checklist : [];
+  if (list.length === 0) return null;
+  const done = list.filter((c) => c.done).length;
+  return { done, total: list.length, pct: Math.round((done / list.length) * 100) };
 }
 
 /* ---------- Helpers de fecha ---------- */

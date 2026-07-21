@@ -5,9 +5,9 @@
 
 import { state } from "../state.js";
 import { ui } from "../bus.js";
-import { TYPES, PRIORITIES, dueStatus, inScope, sortItems } from "../model.js";
+import { TYPES, PRIORITIES, dueStatus, inScope, sortItems, checklistProgress } from "../model.js";
 import { $, el } from "./dom.js";
-import { toggleDone, deleteItem } from "../store.js";
+import { toggleDone, deleteItem, toggleChecklistItem } from "../store.js";
 import { openSheet } from "./sheet.js";
 
 /* ---------- Derivados ---------- */
@@ -80,10 +80,34 @@ export function renderCard(it) {
     }, "Eliminar"),
   ]);
 
+  // Objetivos (checklist) con progreso y marcado directo
+  const prog = checklistProgress(it);
+  const checklist = prog ? el("div", { class: "pt-chk-view" }, [
+    el("div", { class: "pt-chk-progress" }, [
+      el("div", { class: "pt-chk-bar" }, [
+        el("div", { class: "pt-chk-bar-fill", style: { width: prog.pct + "%" } }),
+      ]),
+      el("span", { class: "pt-chk-count" }, `${prog.done}/${prog.total}`),
+    ]),
+    el("div", { class: "pt-chk-items" },
+      it.checklist.map((c) =>
+        el("button", {
+          class: "pt-chk-item" + (c.done ? " done" : ""),
+          "aria-pressed": String(c.done),
+          onclick: () => toggleChecklistItem(it.id, c.id),
+        }, [
+          el("span", { class: "pt-chk-box" + (c.done ? " on" : "") }, c.done ? "✓" : ""),
+          el("span", { class: "pt-chk-label" }, c.text),
+        ])
+      )
+    ),
+  ]) : null;
+
   const body = el("div", { class: "pt-cbody" }, [
     badges,
     el("div", { class: "pt-title" }, it.title),
     it.detail ? el("div", { class: "pt-detail" }, it.detail) : null,
+    checklist,
     actions,
   ]);
 
@@ -100,53 +124,72 @@ export function renderCard(it) {
     }
   }, { once: true });
 
-  // --- Implementación de Gestos Swipe ---
-  let startX = 0;
-  let currentX = 0;
-  let isDragging = false;
+  /* --- Gestos Swipe ---
+   * Reglas para no disparar acciones por accidente:
+   *  - Un toque simple (sin movimiento) NUNCA cuenta como deslizamiento.
+   *  - El eje se decide en el primer movimiento: si el dedo va más en
+   *    vertical, es scroll de la lista y la tarjeta no se mueve.
+   *  - La acción solo ocurre si se supera el umbral horizontal. */
+  const AXIS_LOCK = 12;   // px antes de decidir el eje del gesto
+  let startX = 0, startY = 0, currentX = 0;
+  let axis = null;        // null | "h" | "v"
+
+  const resetGesture = () => {
+    startX = 0; startY = 0; currentX = 0; axis = null;
+  };
 
   cardElement.addEventListener('touchstart', (e) => {
-    startX = e.touches[0].clientX;
-    isDragging = true;
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    currentX = t.clientX; // clave: sin movimiento, el desplazamiento es 0
+    axis = null;
     cardElement.style.transition = 'none';
   }, { passive: true });
 
   cardElement.addEventListener('touchmove', (e) => {
-    if (!isDragging) return;
-    currentX = e.touches[0].clientX;
-    const diffX = currentX - startX;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
 
-    // Mover la tarjeta con el dedo
-    cardElement.style.transform = `translateX(${diffX}px)`;
+    if (axis === null) {
+      if (Math.abs(dx) < AXIS_LOCK && Math.abs(dy) < AXIS_LOCK) return;
+      // Sesgo a favor del scroll vertical: arrastrar exige intención clara
+      axis = Math.abs(dx) > Math.abs(dy) * 1.5 ? "h" : "v";
+    }
+    if (axis !== "h") return;
+
+    currentX = t.clientX;
+    cardElement.style.transform = `translateX(${dx}px)`;
   }, { passive: true });
 
-  cardElement.addEventListener('touchend', () => {
-    if (!isDragging) return;
-    isDragging = false;
+  const endGesture = () => {
+    if (axis !== "h") { resetGesture(); return; }
     const diffX = currentX - startX;
-    const threshold = window.innerWidth * 0.35; // 35% del ancho de pantalla para activar la acción
+    // Umbral: 35% del ancho, acotado para pantallas grandes
+    const threshold = Math.min(window.innerWidth * 0.35, 220);
+    cardElement.style.transition = 'transform 0.2s ease-out';
 
     if (diffX > threshold) {
-      // Completar (Deslizar a la derecha)
-      cardElement.style.transition = 'transform 0.2s ease-out';
+      // Completar (deslizar a la derecha)
       cardElement.style.transform = 'translateX(100%)';
-      setTimeout(() => {
-        toggleDone(it.id);
-      }, 200);
+      setTimeout(() => toggleDone(it.id), 200);
     } else if (diffX < -threshold) {
-      // Eliminar (Deslizar a la izquierda)
-      cardElement.style.transition = 'transform 0.2s ease-out';
+      // Eliminar (deslizar a la izquierda)
       cardElement.style.transform = 'translateX(-100%)';
-      setTimeout(() => {
-        deleteItem(it.id);
-      }, 200);
+      setTimeout(() => deleteItem(it.id), 200);
     } else {
       // Rebotar a la posición inicial
-      cardElement.style.transition = 'transform 0.2s ease-out';
       cardElement.style.transform = 'translateX(0px)';
     }
-    startX = 0;
-    currentX = 0;
+    resetGesture();
+  };
+
+  cardElement.addEventListener('touchend', endGesture);
+  cardElement.addEventListener('touchcancel', () => {
+    cardElement.style.transition = 'transform 0.2s ease-out';
+    cardElement.style.transform = 'translateX(0px)';
+    resetGesture();
   });
 
   return el("div", { class: "pt-card-wrapper" }, [

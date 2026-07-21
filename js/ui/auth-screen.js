@@ -4,8 +4,104 @@
 
 import { state } from "../state.js";
 import { ui } from "../bus.js";
-import { loginWithGoogle, loginWithEmail, registerWithEmail } from "../auth.js";
+import { loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword } from "../auth.js";
 import { $, el } from "./dom.js";
+
+/* ---------- Ventana de recuperación de contraseña ---------- */
+function closeResetSheet() {
+  const r = $("#reset-root");
+  if (r) r.remove();
+}
+
+function openResetSheet(emailPrefill = "") {
+  closeResetSheet();
+
+  const root = el("div", { class: "pt-overlay", id: "reset-root", onclick: closeResetSheet });
+  const sheet = el("div", { class: "pt-sheet", onclick: (e) => e.stopPropagation() });
+
+  const input = el("input", {
+    type: "email",
+    class: "pt-auth-input",
+    style: { paddingLeft: "14px" },
+    placeholder: "tucorreo@ejemplo.com",
+    value: (emailPrefill || "").trim(),
+  });
+
+  const err = el("div", { class: "pt-err", style: { display: "none" } });
+
+  const enviarBtn = el("button", {
+    class: "pt-btn-primary",
+    onclick: async () => {
+      const correo = input.value.trim();
+      if (!correo) {
+        err.textContent = "Escribe tu correo electrónico.";
+        err.style.display = "block";
+        input.focus();
+        return;
+      }
+      err.style.display = "none";
+      enviarBtn.disabled = true;
+      enviarBtn.textContent = "ENVIANDO...";
+
+      const { error } = await resetPassword(correo);
+
+      if (error) {
+        err.textContent = error;
+        err.style.display = "block";
+        enviarBtn.disabled = false;
+        enviarBtn.textContent = "ENVIAR ENLACE";
+        return;
+      }
+      mostrarInstrucciones(correo);
+    },
+  }, "ENVIAR ENLACE");
+
+  // Paso 1: pedir el correo
+  function build() {
+    sheet.innerHTML = "";
+    sheet.append(el("div", { class: "pt-sheet-handle" }));
+    sheet.append(el("h2", { class: "pt-pixel" }, "RECUPERAR CONTRASEÑA"));
+    sheet.append(el("p", { class: "pt-reset-text" },
+      "Escribe el correo de tu cuenta y te enviaremos un enlace para crear una contraseña nueva."));
+    sheet.append(el("div", { class: "pt-field" }, [
+      el("label", {}, "Correo electrónico"),
+      input,
+    ]));
+    sheet.append(err);
+    sheet.append(el("div", { class: "pt-sheetacts" }, [
+      enviarBtn,
+      el("button", { class: "pt-cancel", onclick: closeResetSheet }, "CANCELAR"),
+    ]));
+  }
+
+  // Paso 2: confirmación con instrucciones claras
+  function mostrarInstrucciones(correo) {
+    sheet.innerHTML = "";
+    sheet.append(el("div", { class: "pt-sheet-handle" }));
+    sheet.append(el("div", { class: "pt-reset-icon" }, "📩"));
+    sheet.append(el("h2", { class: "pt-pixel", style: { textAlign: "center" } }, "REVISA TU CORREO"));
+    sheet.append(el("p", { class: "pt-reset-text" }, [
+      "Si ",
+      el("b", {}, correo),
+      " tiene una cuenta en RetroTasks, acabamos de enviarle un enlace para restablecer la contraseña.",
+    ]));
+    sheet.append(el("ol", { class: "pt-reset-steps" }, [
+      el("li", {}, "Abre el correo de RetroTasks en tu bandeja de entrada."),
+      el("li", {}, "Toca el enlace y escribe tu contraseña nueva."),
+      el("li", {}, "Vuelve aquí e inicia sesión con ella."),
+    ]));
+    sheet.append(el("p", { class: "pt-reset-hint" },
+      "¿No lo ves? Revisa la carpeta de spam o correo no deseado. El remitente es noreply@retrotasks-903c9.firebaseapp.com"));
+    sheet.append(el("div", { class: "pt-sheetacts" }, [
+      el("button", { class: "pt-save", onclick: closeResetSheet }, "ENTENDIDO"),
+    ]));
+  }
+
+  build();
+  root.append(sheet);
+  document.body.append(root);
+  setTimeout(() => input.focus(), 80);
+}
 
 export function renderAuthScreen(container) {
   const errorNode = el("div", { class: "pt-auth-error" }, state.authError);
@@ -67,6 +163,14 @@ export function renderAuthScreen(container) {
     el("button", { type: "submit", class: "pt-btn-primary" }, isLogin ? "INICIAR SESIÓN" : "REGISTRARSE")
   ]);
 
+  // Enlace de recuperación (solo en modo inicio de sesión).
+  // Abre una ventana propia con su propio campo de correo.
+  const forgotLink = isLogin ? el("button", {
+    class: "pt-auth-forgot",
+    type: "button",
+    onclick: () => openResetSheet(emailInput.value),
+  }, "¿Olvidaste tu contraseña?") : null;
+
   const toggleBtn = el("button", {
     onclick: () => {
       state.authMode = isLogin ? "register" : "login";
@@ -105,6 +209,7 @@ export function renderAuthScreen(container) {
     el("div", { class: "pt-auth-divider pt-pixel" }, "o"),
     form,
     errorNode,
+    forgotLink,
     toggleText
   ]);
 

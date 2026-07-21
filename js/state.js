@@ -38,7 +38,8 @@ export const state = {
   sheetOpen: false,
 
   // Cooperativo / Tableros
-  activeBoardId: null,
+  activeBoardId: null,        // null = espacio personal
+  boards: [],                 // [{ id, name }] membresías del usuario
   syncNickname: "",
   syncStatusMessage: "",
   lastDeletedId: null,

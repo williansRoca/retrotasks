@@ -175,6 +175,9 @@ input, textarea { font-family: inherit; }
   height: 160px;
   margin-bottom: 16px;
   image-rendering: pixelated;
+  /* El arte tiene esquinas redondeadas: recortarlas evita que se
+     asomen los píxeles claros del borde original de la imagen. */
+  border-radius: 14%;
 }
 
 .pt-auth-logo {
@@ -1100,7 +1103,10 @@ input, textarea { font-family: inherit; }
  * ============================================================ */
 .pt-toast-container {
   position: fixed;
-  top: 12px;
+  /* Bajar los avisos por debajo de la barra de estado de Android:
+     safe-area cubre los dispositivos con notch y los 24px extra
+     dejan aire respecto a la barra en el resto. */
+  top: calc(env(safe-area-inset-top, 0px) + 36px);
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 28px);
@@ -1520,3 +1526,483 @@ input, textarea { font-family: inherit; }
 }
 .pt-cal-add:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--accent-dim); }
 .pt-cal-daylist { display: flex; flex-direction: column; gap: 12px; }
+
+/* Botón de acción dentro de un toast (p. ej. "Deshacer") */
+.pt-toast-action {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  cursor: pointer;
+  background: var(--accent);
+  color: var(--bg-deep);
+  border: 2px solid var(--accent-dim);
+  border-radius: var(--radius);
+}
+.pt-toast-action:active { transform: translateY(1px); }
+
+/* ============================================================
+ * SELECTOR DE ESPACIO DE TRABAJO (personal / tableros)
+ * ============================================================ */
+.pt-ws-chip {
+  display: flex; align-items: center; gap: 7px;
+  margin-top: 10px; padding: 7px 12px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-size: 13px; font-weight: 700;
+  max-width: 100%;
+}
+.pt-ws-chip.shared { border-color: var(--accent); color: var(--accent); }
+.pt-ws-chip-icon { font-size: 14px; line-height: 1; }
+.pt-ws-chip-name {
+  max-width: 190px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.pt-ws-chip-caret { font-size: 10px; opacity: .7; }
+.pt-ws-chip:active { transform: translateY(1px); }
+
+.pt-ws-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.pt-ws-option {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 12px 14px; text-align: left;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+}
+.pt-ws-option.active { border-color: var(--accent); background: var(--bg-elevated); }
+.pt-ws-option-icon { font-size: 20px; }
+.pt-ws-option-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pt-ws-option-name {
+  font-size: 15px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pt-ws-option-hint { font-size: 11px; color: var(--text-muted); }
+.pt-ws-option-check { color: var(--accent); font-weight: 900; font-size: 16px; }
+
+/* Estado actual en la pestaña Tableros */
+.pt-ws-current {
+  background: var(--bg-surface);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 14px; margin-bottom: 18px; text-align: center;
+}
+.pt-ws-current-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 1px;
+  color: var(--text-muted); margin-bottom: 6px;
+}
+.pt-ws-current-name { font-size: 18px; font-weight: 800; color: var(--accent); }
+.pt-ws-current-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+/* Lista de tableros */
+.pt-board-sec { margin-bottom: 22px; }
+.pt-board-sec .pt-stat-label { margin-bottom: 8px; display: block; }
+.pt-board-row {
+  display: flex; align-items: stretch; gap: 6px; margin-bottom: 8px;
+}
+.pt-board-open {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px; text-align: left;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+}
+.pt-board-row.active .pt-board-open { border-color: var(--accent); background: var(--bg-elevated); }
+.pt-board-name {
+  font-size: 14px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pt-board-code { font-size: 11px; color: var(--text-muted); letter-spacing: .5px; }
+.pt-board-share, .pt-board-leave {
+  flex: 0 0 42px;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 15px; font-weight: 800;
+}
+.pt-board-leave { color: var(--red); border-color: var(--red); }
+.pt-board-share:active, .pt-board-leave:active { transform: translateY(2px); }
+
+.pt-board-limits {
+  margin-top: 6px; padding: 12px 14px;
+  background: var(--bg-surface);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+}
+.pt-limit-list { margin: 8px 0 0; padding-left: 18px; }
+.pt-limit-list li { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; line-height: 1.5; }
+
+/* Opción destructiva dentro de una hoja de opciones */
+.pt-ws-option.danger { border-color: var(--red); }
+.pt-ws-option.danger .pt-ws-option-name { color: var(--red); }
+
+/* ============================================================
+ * RECUPERAR CONTRASEÑA
+ * ============================================================ */
+.pt-auth-forgot {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: underline;
+  background: none;
+  padding: 6px;
+}
+
+/* ============================================================
+ * CHECKLIST (objetivos de una misión)
+ * ============================================================ */
+/* --- Editor dentro del formulario --- */
+.pt-chk-editor { display: flex; flex-direction: column; gap: 8px; }
+.pt-chk-row { display: flex; align-items: center; gap: 8px; }
+.pt-chk-text {
+  flex: 1; min-width: 0;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 14px;
+  padding: 9px 10px;
+  outline: none;
+}
+.pt-chk-text:focus { border-color: var(--accent); }
+.pt-chk-text.done { color: var(--text-muted); text-decoration: line-through; }
+.pt-chk-del {
+  flex: 0 0 36px; height: 36px;
+  color: var(--red);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  font-weight: 800;
+}
+.pt-chk-add {
+  align-self: flex-start;
+  padding: 8px 14px;
+  font-size: 13px; font-weight: 800;
+  color: var(--accent);
+  background: var(--bg-surface);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+/* --- Casilla (compartida entre editor y tarjeta) --- */
+.pt-chk-box {
+  flex: 0 0 22px; width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  color: var(--bg-deep);
+  font-size: 13px; font-weight: 900;
+  line-height: 1;
+}
+.pt-chk-box.on { background: var(--green); border-color: var(--green); }
+
+/* --- Vista dentro de la tarjeta --- */
+.pt-chk-view { margin-top: 10px; }
+.pt-chk-progress { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pt-chk-bar {
+  flex: 1; height: 6px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.pt-chk-bar-fill {
+  height: 100%;
+  background: var(--green);
+  transition: width .25s steps(6);
+}
+.pt-chk-count {
+  font-size: 11px; font-weight: 800;
+  color: var(--text-muted);
+  font-family: 'Press Start 2P', monospace;
+}
+.pt-chk-items { display: flex; flex-direction: column; gap: 6px; }
+.pt-chk-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; text-align: left;
+  padding: 4px 0;
+  background: none;
+  color: var(--text-primary);
+}
+.pt-chk-label { font-size: 13.5px; line-height: 1.4; }
+.pt-chk-item.done .pt-chk-label { color: var(--text-muted); text-decoration: line-through; }
+
+/* Ventana de recuperación de contraseña */
+.pt-reset-icon { font-size: 42px; text-align: center; margin-bottom: 6px; }
+.pt-reset-text {
+  font-size: 14.5px; line-height: 1.6;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+.pt-reset-text b { color: var(--accent); word-break: break-all; }
+.pt-reset-steps { margin: 0 0 14px; padding-left: 22px; }
+.pt-reset-steps li {
+  font-size: 14px; line-height: 1.5;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.pt-reset-hint {
+  font-size: 12px; line-height: 1.5;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  word-break: break-word;
+}
+
+/* ============================================================
+ * TEMA SOBRIO — claro, neutro, sin estética arcade
+ * Cambia paleta + tipografía + suaviza bordes y sombras.
+ * ============================================================ */
+body.theme-sobrio {
+  --bg-deep:      #F4F5F7;
+  --bg-surface:   #FFFFFF;
+  --bg-elevated:  #FFFFFF;
+  --accent:       #2F6FD0;
+  --accent-dim:   #24589F;
+  --accent-glow:  rgba(47, 111, 208, 0.18);
+  --green:        #2E7D46;
+  --green-glow:   rgba(46, 125, 70, 0.16);
+  --red:          #C0392B;
+  --red-glow:     rgba(192, 57, 43, 0.16);
+  --amber:        #B07A0B;
+  --amber-glow:   rgba(176, 122, 11, 0.16);
+  --blue:         #2F6FD0;
+  --blue-glow:    rgba(47, 111, 208, 0.16);
+  --text-primary: #1C1E21;
+  --text-muted:   #6B7280;
+  --border:       #D5D8DE;
+  --radius:       8px;
+  --shadow:       0 6px 20px rgba(15, 23, 42, 0.10);
+  /* Repetir el color explícitamente: al transicionar "background",
+     algunos navegadores no recalculan el fondo del <body> cuando
+     solo cambia la variable. Esto asegura el fondo claro completo. */
+  background-color: #F4F5F7;
+}
+
+/* Sin fuente pixel: los títulos usan la tipografía normal.
+   Se usa !important porque varios títulos fijan su tamaño en línea. */
+body.theme-sobrio .pt-pixel {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0;
+  font-weight: 800;
+  line-height: 1.35;
+}
+body.theme-sobrio .pt-logo        { font-size: 19px !important; text-shadow: none; }
+body.theme-sobrio .pt-auth-logo   { font-size: 27px !important; text-shadow: none; }
+body.theme-sobrio .pt-auth-sub    { font-size: 14px !important; }
+body.theme-sobrio .pt-sheet h2    { font-size: 18px !important; }
+body.theme-sobrio .pt-drawer-head h2 { font-size: 17px !important; }
+body.theme-sobrio .pt-empty .pt-pixel { font-size: 17px !important; }
+body.theme-sobrio .pt-cal-title   { font-size: 16px !important; }
+body.theme-sobrio .pt-xpline .pt-pixel,
+body.theme-sobrio .pt-chk-count   { font-size: 12px !important; font-family: 'Outfit', sans-serif; }
+body.theme-sobrio h2.pt-pixel     { font-size: 16px !important; }
+body.theme-sobrio .pt-cal-dow     { font-size: 11px !important; }
+
+/* Bordes finos y sombras suaves en lugar de bloques sólidos */
+body.theme-sobrio .pt-card,
+body.theme-sobrio .pt-input,
+body.theme-sobrio .pt-textarea,
+body.theme-sobrio .pt-date,
+body.theme-sobrio .pt-auth-input,
+body.theme-sobrio .pt-pill,
+body.theme-sobrio .pt-chip,
+body.theme-sobrio .pt-act,
+body.theme-sobrio .pt-icon-btn,
+body.theme-sobrio .pt-ws-option,
+body.theme-sobrio .pt-board-open,
+body.theme-sobrio .pt-cal-day,
+body.theme-sobrio .pt-toast {
+  border-width: 1px;
+  box-shadow: none;
+}
+body.theme-sobrio .pt-card { box-shadow: 0 1px 3px rgba(15,23,42,.08); }
+body.theme-sobrio .pt-btn-primary,
+body.theme-sobrio .pt-save,
+body.theme-sobrio .pt-cancel,
+body.theme-sobrio .pt-fab button {
+  border-width: 1px;
+  box-shadow: 0 2px 6px rgba(15,23,42,.16);
+}
+body.theme-sobrio .pt-btn-primary:active,
+body.theme-sobrio .pt-save:active,
+body.theme-sobrio .pt-fab button:active { transform: translateY(1px); }
+body.theme-sobrio .pt-header { border-bottom: 1px solid var(--border); }
+body.theme-sobrio .pt-bottom-nav { border-top: 1px solid var(--border); }
+/* El fondo claro necesita texto oscuro en el estado vacío */
+body.theme-sobrio .pt-empty p { color: var(--text-muted); text-shadow: none; }
+
+/* ============================================================
+ * ACCESIBILIDAD — tamaño de texto
+ * ============================================================ */
+body.font-sm .pt-title      { font-size: 14px; }
+body.font-sm .pt-detail,
+body.font-sm .pt-chk-label  { font-size: 12.5px; }
+
+body.font-lg .pt-title      { font-size: 18px; }
+body.font-lg .pt-detail,
+body.font-lg .pt-chk-label  { font-size: 15.5px; }
+body.font-lg .pt-input,
+body.font-lg .pt-textarea,
+body.font-lg .pt-date,
+body.font-lg .pt-auth-input { font-size: 17px; }
+body.font-lg .pt-act,
+body.font-lg .pt-pill,
+body.font-lg .pt-chip       { font-size: 15px; }
+body.font-lg .pt-nav-item span:last-child { font-size: 12px; }
+body.font-lg .pt-board-name,
+body.font-lg .pt-ws-option-name { font-size: 16px; }
+body.font-lg .pt-reset-text,
+body.font-lg .pt-reset-steps li { font-size: 16px; }
+
+body.font-xl .pt-title      { font-size: 21px; }
+body.font-xl .pt-detail,
+body.font-xl .pt-chk-label  { font-size: 17.5px; }
+body.font-xl .pt-input,
+body.font-xl .pt-textarea,
+body.font-xl .pt-date,
+body.font-xl .pt-auth-input { font-size: 19px; }
+body.font-xl .pt-act,
+body.font-xl .pt-pill,
+body.font-xl .pt-chip       { font-size: 16.5px; min-height: 46px; }
+body.font-xl .pt-nav-item span:last-child { font-size: 13px; }
+body.font-xl .pt-board-name,
+body.font-xl .pt-ws-option-name { font-size: 18px; }
+body.font-xl .pt-reset-text,
+body.font-xl .pt-reset-steps li { font-size: 18px; }
+body.font-xl .pt-badges span { font-size: 11.5px; }
+
+/* ============================================================
+ * ACCESIBILIDAD — alto contraste
+ * ============================================================ */
+body.high-contrast {
+  --text-muted: var(--text-primary);
+  --border: var(--text-primary);
+}
+body.high-contrast .pt-detail,
+body.high-contrast .pt-hint,
+body.high-contrast .pt-board-code,
+body.high-contrast .pt-ws-option-hint,
+body.high-contrast .pt-stat-label { color: var(--text-primary); }
+body.high-contrast .pt-card,
+body.high-contrast .pt-input,
+body.high-contrast .pt-textarea,
+body.high-contrast .pt-auth-input,
+body.high-contrast .pt-act,
+body.high-contrast .pt-pill { border-width: 3px; }
+body.high-contrast .pt-done { opacity: .85; }
+body.high-contrast :focus-visible { outline: 4px solid var(--accent); outline-offset: 2px; }
+
+/* ============================================================
+ * VENTANA DE CONFIGURACIÓN
+ * ============================================================ */
+.pt-set-section {
+  font-size: 11px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 20px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--border);
+}
+.pt-set-section:first-of-type { margin-top: 10px; }
+.pt-set-row {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; text-align: left;
+  padding: 12px 0;
+  background: none;
+  color: var(--text-primary);
+}
+.pt-set-row.col { flex-direction: column; align-items: stretch; gap: 8px; }
+.pt-set-texts { flex: 1; min-width: 0; }
+.pt-set-label { font-size: 15px; font-weight: 700; }
+.pt-set-hint { font-size: 12.5px; color: var(--text-muted); line-height: 1.45; margin-top: 3px; }
+
+/* Interruptor */
+.pt-switch {
+  flex: 0 0 50px; width: 50px; height: 28px;
+  background: var(--bg-deep);
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  position: relative;
+  transition: background .18s, border-color .18s;
+}
+.pt-switch.on { background: var(--green); border-color: var(--green); }
+.pt-switch-knob {
+  position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  background: var(--text-primary);
+  border-radius: 50%;
+  transition: transform .18s steps(4);
+}
+.pt-switch.on .pt-switch-knob { transform: translateX(22px); background: #fff; }
+
+.pt-set-about {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 13px; color: var(--text-muted);
+  padding: 4px 0 8px;
+}
+.pt-set-about a { color: var(--accent); }
+
+/* ============================================================
+ * GUÍA DE USO
+ * ============================================================ */
+.pt-guide-intro {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.pt-guide-sec {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--border);
+}
+.pt-guide-sec:last-of-type { border-bottom: none; }
+.pt-guide-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 16px; font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.pt-guide-icon { font-size: 20px; }
+.pt-guide-text {
+  font-size: 14.5px; line-height: 1.6;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+.pt-guide-steps { margin: 0 0 10px; padding-left: 22px; }
+.pt-guide-steps li {
+  font-size: 14.5px; line-height: 1.55;
+  color: var(--text-primary);
+  margin-bottom: 7px;
+}
+.pt-guide-list { margin: 0 0 10px; padding-left: 20px; list-style: square; }
+.pt-guide-list li {
+  font-size: 14.5px; line-height: 1.55;
+  color: var(--text-primary);
+  margin-bottom: 7px;
+}
+.pt-guide-list b { color: var(--accent); }
+.pt-guide-tip {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--bg-elevated);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 11px 13px;
+  font-size: 13.5px; line-height: 1.55;
+  color: var(--text-primary);
+}
+.pt-guide-tip-icon { flex: 0 0 auto; }
+
+/* Cabecera de bienvenida en la guía (primer inicio) */
+.pt-guide-welcome { text-align: center; margin-bottom: 18px; }
+.pt-guide-welcome-icon { font-size: 40px; margin-bottom: 8px; }
+.pt-guide-welcome h2 { margin-bottom: 10px; }

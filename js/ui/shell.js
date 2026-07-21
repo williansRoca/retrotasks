@@ -16,6 +16,7 @@ import { renderBoardsView } from "./boards.js";
 import { renderAlertsView } from "./alerts.js";
 import { renderProfileView } from "./profile.js";
 import { renderAuthScreen } from "./auth-screen.js";
+import { renderWorkspaceChip } from "./workspace.js";
 
 const soundOnSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter" style="width: 18px; height: 18px;"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`;
 const soundOffSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter" style="width: 18px; height: 18px;"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>`;
@@ -61,6 +62,8 @@ export function renderShell() {
         }, [el("span", { id: "sound-icon-span", style: { display: 'flex' }, html: state.soundOn ? soundOnSvg : soundOffSvg })]),
       ]),
     ]),
+    // Indicador y selector del espacio de trabajo actual
+    renderWorkspaceChip(),
     el("div", { class: "pt-xpwrap" }, [
       el("div", { class: "pt-xptrack" }, [el("div", { class: "pt-xpfill", id: "xpfill" })]),
       el("div", { class: "pt-xpline", id: "xpline" }),
@@ -95,7 +98,7 @@ function createNavItem(tabId, iconSvg, label, badgeCount = 0) {
     onclick: () => {
       state.activeTab = tabId;
       renderShell();
-      render();
+      render(true);
     }
   }, [
     el("span", { style: { display: 'flex', alignItems: 'center', justifyContent: 'center' }, html: iconSvg }),
@@ -109,11 +112,26 @@ function createNavItem(tabId, iconSvg, label, badgeCount = 0) {
   return item;
 }
 
-// Render principal de contenidos según el Tab activo
-export function render() {
+/* ¿El usuario está escribiendo dentro del área de contenido?
+ * Repintar en ese momento reemplazaría el <input> por un nodo nuevo:
+ * se perdería el foco y en Android se cerraría el teclado. */
+function isTypingInContent() {
+  const a = document.activeElement;
+  if (!a) return false;
+  const esCampo = a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable;
+  if (!esCampo) return false;
+  const list = $("#list");
+  const filters = $("#filters");
+  return (list && list.contains(a)) || (filters && filters.contains(a));
+}
+
+// Render principal de contenidos según el Tab activo.
+// force=true repinta aunque haya un campo enfocado (cambio de pestaña).
+export function render(force = false) {
   if (!state.user) return;
 
   renderXP();
+  if (!force && isTypingInContent()) return;
 
   const isWide = window.innerWidth >= 768;
   const list = $("#list");

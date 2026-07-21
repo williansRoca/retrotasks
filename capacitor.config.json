@@ -9,6 +9,12 @@
 				"sound",
 				"alert"
 			]
+		},
+		"FirebaseAuthentication": {
+			"skipNativeAuth": false,
+			"providers": [
+				"google.com"
+			]
 		}
 	}
 }

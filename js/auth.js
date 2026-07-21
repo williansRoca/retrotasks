@@ -14,11 +14,13 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithCredential,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   updateProfile,
   deleteUser,
+  sendPasswordResetEmail,
   GoogleAuthProvider,
 } from "./vendor/firebase-auth.js";
 import {
@@ -83,14 +85,48 @@ export function watchAuthState(callback) {
   });
 }
 
-// Login con Google (abre popup)
+/* Login con Google.
+ *
+ * IMPORTANTE: signInWithPopup NO funciona dentro del WebView de
+ * Capacitor (no hay ventana emergente que devuelva el resultado; la
+ * pantalla se quedaba en blanco). En Android usamos el plugin nativo
+ * @capacitor-firebase/authentication: abre el selector de cuentas del
+ * sistema y nos devuelve un idToken que canjeamos por una credencial
+ * de Firebase. En la web se mantiene el popup de siempre. */
+function isNativePlatform() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
 export async function loginWithGoogle() {
   const auth = getAuthInstance();
   try {
+    if (isNativePlatform()) {
+      const FirebaseAuthentication = window.Capacitor.Plugins.FirebaseAuthentication;
+      if (!FirebaseAuthentication) {
+        return { user: null, error: "El inicio de sesión con Google no está disponible en este dispositivo." };
+      }
+      // 1. Selector de cuentas nativo de Android
+      const result = await FirebaseAuthentication.signInWithGoogle();
+      const idToken = result?.credential?.idToken;
+      if (!idToken) {
+        return { user: null, error: "Se canceló el inicio de sesión." };
+      }
+      // 2. Canjear el token por una sesión del SDK web (que es el que
+      //    usa el resto de la app para leer y escribir en Firestore)
+      const credential = GoogleAuthProvider.credential(idToken);
+      const cred = await signInWithCredential(auth, credential);
+      await ensureUserProfile(cred.user);
+      return { user: cred.user, error: null };
+    }
+
     const result = await signInWithPopup(auth, googleProvider);
     await ensureUserProfile(result.user);
     return { user: result.user, error: null };
   } catch (e) {
+    console.error("Error en login con Google:", e);
+    if (e?.message?.includes("cancel") || e?.code === "auth/popup-closed-by-user") {
+      return { user: null, error: "Se canceló el inicio de sesión." };
+    }
     return { user: null, error: friendlyError(e.code) };
   }
 }
@@ -118,6 +154,28 @@ export async function registerWithEmail(email, password, displayName) {
     return { user: result.user, error: null };
   } catch (e) {
     return { user: null, error: friendlyError(e.code) };
+  }
+}
+
+/* Envía el correo para restablecer la contraseña.
+ * Por privacidad, Firebase no revela si el correo existe o no; se
+ * responde siempre con el mismo mensaje para no filtrar qué cuentas
+ * están registradas. */
+export async function resetPassword(email) {
+  const auth = getAuthInstance();
+  const correo = (email || "").trim();
+  if (!correo) return { error: "Escribe tu correo electrónico primero." };
+  try {
+    await sendPasswordResetEmail(auth, correo);
+    return { error: null };
+  } catch (e) {
+    if (e.code === "auth/invalid-email") {
+      return { error: "El correo electrónico no es válido." };
+    }
+    if (e.code === "auth/user-not-found") {
+      return { error: null }; // no revelar si existe
+    }
+    return { error: friendlyError(e.code) };
   }
 }
 

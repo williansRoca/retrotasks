@@ -1,18 +1,20 @@
 /* ============================================================
  * ui/profile.js — Pestaña Perfil: avatar, temas, estadísticas,
- * cierre de sesión y la Guía de Aventura (tutorial inicial).
+ * configuración, guía y cierre de sesión.
  * ============================================================ */
 
 import { state } from "../state.js";
 import { ui } from "../bus.js";
 import { setMeta } from "../db.js";
-import { createItem } from "../model.js";
+
 import { THEMES, changeTheme } from "../theme.js";
 import { logout, deleteAccount } from "../auth.js";
-import { initFirebase, saveUserItem, deleteAllUserData } from "../firebase.js";
-import { showToast } from "./dom.js";
+import { initFirebase, deleteAllUserData } from "../firebase.js";
+
 import { doc, setDoc, getDoc } from "../vendor/firebase-firestore.js";
-import { el } from "./dom.js";
+import { el, showToast } from "./dom.js";
+import { openSettings } from "./settings.js";
+import { openGuide } from "./guide.js";
 
 /* ---------- Preferencias del usuario (avatar + tutorial) ---------- */
 
@@ -27,8 +29,9 @@ export async function loadUserPreferences(uid) {
     if (userSnap.exists()) {
       const userData = userSnap.data();
       state.avatarId = userData.preferences?.avatarId || 1;
+      // Primer inicio: mostrar la guía de bienvenida automáticamente
       if (userData.preferences && userData.preferences.showTutorialPrompt) {
-        showTutorialModal(uid);
+        openGuide({ firstRun: true, uid });
       }
     } else {
       state.avatarId = 1;
@@ -37,84 +40,6 @@ export async function loadUserPreferences(uid) {
     console.warn("Error al buscar preferencias del usuario:", e);
     state.avatarId = 1;
   }
-}
-
-/* ---------- Guía de Aventura (Tutorial) ---------- */
-function showTutorialModal(uid) {
-  // Evitar duplicados del modal
-  if (document.querySelector("#tutorial-root")) return;
-
-  const root = el("div", { class: "pt-overlay", id: "tutorial-root" });
-  const modal = el("div", {
-    class: "pt-sheet",
-    style: {
-      maxWidth: '380px',
-      textAlign: 'center',
-      padding: '24px',
-      borderRadius: '8px',
-      border: '3px solid var(--accent)',
-      boxShadow: '0 8px 0 rgba(0,0,0,0.4)'
-    }
-  }, [
-    el("h2", { class: "pt-pixel", style: { fontSize: '10px', color: 'var(--accent)', marginBottom: '16px' } }, "⚔️ NUEVA AVENTURA ⚔️"),
-    el("p", { style: { fontSize: '14.5px', lineHeight: '1.6', marginBottom: '24px', color: 'var(--text-primary)' } },
-      "¿Deseas iniciar la Guía de Aventura para aprender a dominar tus misiones, o prefieres comenzar tu viaje solo?"
-    ),
-    el("div", { style: { display: 'flex', flexDirection: 'column', gap: '10px' } }, [
-      el("button", {
-        class: "pt-save",
-        style: { width: '100%' },
-        onclick: async () => {
-          await startAdventureGuide(uid);
-          root.remove();
-        }
-      }, "INICIAR GUÍA"),
-      el("button", {
-        class: "pt-cancel",
-        style: { width: '100%' },
-        onclick: async () => {
-          await skipAdventureGuide(uid);
-          root.remove();
-        }
-      }, "SALTAR TUTORIAL")
-    ])
-  ]);
-
-  root.append(modal);
-  document.body.append(root);
-}
-
-async function markTutorialSeen(uid) {
-  const db = initFirebase();
-  if (!db) return;
-  try {
-    const userRef = doc(db, "users", uid);
-    await setDoc(userRef, {
-      preferences: { showTutorialPrompt: false }
-    }, { merge: true });
-  } catch (e) {
-    console.error("Error al actualizar estado del tutorial:", e);
-  }
-}
-
-async function startAdventureGuide(uid) {
-  const tutorials = [
-    { id: "tut-1", type: "tarea", category: "Personal", priority: "alta", title: "🛡️ Crea tu primera misión", detail: "Presiona el botón '+' de abajo para crear una nueva misión.", done: false },
-    { id: "tut-2", type: "tarea", category: "Personal", priority: "media", title: "🧭 Desliza esta tarjeta", detail: "Desliza esta tarjeta hacia la derecha para completarla, o a la izquierda para borrarla.", done: false },
-    { id: "tut-3", type: "tarea", category: "Personal", priority: "baja", title: "🔮 Cambia tu Skin en Perfil", detail: "Ve a la pestaña Perfil (👤) y elige un nuevo color de tema.", done: false },
-    { id: "tut-4", type: "tarea", category: "Personal", priority: "media", title: "🤝 Conéctate con un aliado", detail: "Crea o únete a un tablero colaborativo en la pestaña Tableros (🤝).", done: false }
-  ];
-
-  for (const item of tutorials) {
-    const formattedItem = createItem({ ...item, owner: "Guía de Aventura" });
-    await saveUserItem(uid, formattedItem);
-  }
-
-  await markTutorialSeen(uid);
-}
-
-async function skipAdventureGuide(uid) {
-  await markTutorialSeen(uid);
 }
 
 /* ---------- Vista de Perfil ---------- */
@@ -190,6 +115,22 @@ export function renderProfileView(container) {
   ]);
 
   const actions = el("div", { class: "pt-settings-list" }, [
+    el("button", {
+      class: "pt-settings-item",
+      style: { width: '100%' },
+      onclick: () => openGuide(),
+    }, [
+      el("span", { class: "pt-settings-icon", html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter" style="width: 18px; height: 18px; color: var(--accent);"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17"/></svg>` }),
+      el("span", {}, "Cómo usar la app")
+    ]),
+    el("button", {
+      class: "pt-settings-item",
+      style: { width: '100%' },
+      onclick: () => openSettings(),
+    }, [
+      el("span", { class: "pt-settings-icon", html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter" style="width: 18px; height: 18px; color: var(--accent);"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>` }),
+      el("span", {}, "Configuración")
+    ]),
     el("button", {
       class: "pt-settings-item danger",
       style: { width: '100%' },

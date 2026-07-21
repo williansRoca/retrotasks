@@ -143,6 +143,70 @@ export async function deleteAllUserData(uid) {
 
 // ─── Tableros Colaborativos: boards/{boardId}/ ───────────────
 
+// Lista de tableros a los que pertenece el usuario. Se guarda como
+// arreglo dentro de users/{uid} (no en una subcolección) para que
+// encaje con las reglas de seguridad ya publicadas.
+export async function getUserBoards(uid) {
+  const firestoreDb = initFirebase();
+  if (!firestoreDb || !uid) return [];
+  try {
+    const snap = await getDoc(doc(firestoreDb, "users", uid));
+    const list = snap.exists() ? snap.data().boards : null;
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    console.error("Error al leer los tableros del usuario:", e);
+    return [];
+  }
+}
+
+// Guarda la lista completa de membresías del usuario.
+export async function setUserBoards(uid, boards) {
+  const firestoreDb = initFirebase();
+  if (!firestoreDb || !uid) return false;
+  try {
+    await setDoc(doc(firestoreDb, "users", uid), { boards }, { merge: true });
+    return true;
+  } catch (e) {
+    console.error("Error al guardar los tableros del usuario:", e);
+    return false;
+  }
+}
+
+// Devuelve los datos del tablero (incluido su nombre) o null.
+export async function getBoardInfo(boardId) {
+  const firestoreDb = initFirebase();
+  if (!firestoreDb) return null;
+  try {
+    const snap = await getDoc(doc(firestoreDb, "boards", boardId));
+    return snap.exists() ? snap.data() : null;
+  } catch (e) {
+    console.error("Error al leer el tablero:", e);
+    return null;
+  }
+}
+
+/* Elimina un tablero por completo: sus misiones y el documento del
+ * tablero. Solo el creador puede hacerlo (lo exigen las reglas de
+ * Firestore). Devuelve { ok, error }. */
+export async function deleteBoard(boardId) {
+  const firestoreDb = initFirebase();
+  if (!firestoreDb) return { ok: false, error: "Sin conexión con la base de datos." };
+  try {
+    const itemsSnap = await getDocs(collection(firestoreDb, "boards", boardId, "items"));
+    for (const d of itemsSnap.docs) {
+      await deleteDoc(d.ref);
+    }
+    await deleteDoc(doc(firestoreDb, "boards", boardId));
+    return { ok: true, error: null };
+  } catch (e) {
+    console.error("Error al eliminar el tablero:", e);
+    if (e.code === "permission-denied") {
+      return { ok: false, error: "Solo quien creó el tablero puede eliminarlo." };
+    }
+    return { ok: false, error: "No se pudo eliminar el tablero. Revisa tu conexión." };
+  }
+}
+
 export async function checkBoardExists(boardId) {
   const firestoreDb = initFirebase();
   if (!firestoreDb) return false;
@@ -155,12 +219,13 @@ export async function checkBoardExists(boardId) {
   }
 }
 
-export async function createBoard(boardId, creatorName, creatorId) {
+export async function createBoard(boardId, creatorName, creatorId, boardName) {
   const firestoreDb = initFirebase();
   if (!firestoreDb) return false;
   try {
     await setDoc(doc(firestoreDb, "boards", boardId), {
       createdAt: new Date().toISOString(),
+      name: (boardName || "").trim() || "Tablero compartido",
       creator: (creatorName || "").trim() || "Anónimo",
       creatorId: creatorId || null,
       members: [{ userId: creatorId, nickname: creatorName, joinedAt: new Date().toISOString() }],

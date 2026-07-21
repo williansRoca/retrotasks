@@ -28,9 +28,10 @@ import { DEFAULT_CATEGORIES } from "./model.js";
 import { initFirebase } from "./firebase.js";
 import { watchAuthState } from "./auth.js";
 import { initTheme } from "./theme.js";
+import { initSettings } from "./settings.js";
 import { initPushNotifications } from "./notifications.js";
 import { initAlarms } from "./alarms.js";
-import { setupUserItemsSubscription, setupBoardSubscription } from "./store.js";
+import { setupUserItemsSubscription, setupBoardSubscription, loadUserBoards } from "./store.js";
 import { render, renderShell } from "./ui/shell.js";
 import { loadUserPreferences } from "./ui/profile.js";
 import "./ui/notify.js"; // registra window.showLocalToast para FCM
@@ -50,8 +51,9 @@ async function init() {
   state.activeBoardId = await getActiveBoardId();
   state.alerts = await getMeta("alerts", []);
 
-  // Cargar e iniciar el tema visual seleccionado
+  // Cargar e iniciar el tema visual y las preferencias de accesibilidad
   await initTheme(getMeta);
+  await initSettings();
 
   // Escuchar cambios de autenticación
   watchAuthState(async (user) => {
@@ -60,12 +62,20 @@ async function init() {
       state.user = user;
       state.syncNickname = user.displayName || "Aventurero";
 
+      // Membresías de tableros (para el selector de espacio)
+      await loadUserBoards(user.uid);
+
       // Suscribirse a las tareas personales en Firestore
       setupUserItemsSubscription(user.uid);
 
-      // Si hay un tablero compartido activo, suscribirse a él
+      // Si hay un tablero compartido activo, suscribirse a él.
+      // Si el usuario ya no pertenece a ese tablero, volver al personal.
       if (state.activeBoardId) {
-        setupBoardSubscription(state.activeBoardId);
+        if (state.boards.some((b) => b.id === state.activeBoardId)) {
+          setupBoardSubscription(state.activeBoardId);
+        } else {
+          state.activeBoardId = null;
+        }
       }
 
       // Inicializar notificaciones push nativas si está en Android
@@ -98,11 +108,30 @@ async function init() {
 /* ---------- Arranque ---------- */
 init();
 
-// Re-renderizar al cambiar el tamaño de la ventana (responsive tablet/PC)
+/* Re-renderizar al cambiar el tamaño de la ventana (responsive tablet/PC).
+ *
+ * CUIDADO — bug corregido: en Android, abrir el teclado dispara "resize"
+ * (cambia el alto del viewport). Si repintamos, los <input> se reemplazan
+ * por nodos nuevos, el foco se pierde y el teclado se cierra al instante.
+ * Por eso:
+ *   1. Solo repintamos si cambió el ANCHO (de eso dependen los breakpoints).
+ *   2. Nunca repintamos mientras el usuario escribe en un campo. */
 let _resizeTimer = null;
+let _lastWidth = window.innerWidth;
+
+function isTyping() {
+  const a = document.activeElement;
+  return !!a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable);
+}
+
 window.addEventListener("resize", () => {
+  if (window.innerWidth === _lastWidth) return; // solo cambió el alto (teclado)
   clearTimeout(_resizeTimer);
-  _resizeTimer = setTimeout(() => { render(); }, 200);
+  _resizeTimer = setTimeout(() => {
+    if (isTyping()) return;
+    _lastWidth = window.innerWidth;
+    render();
+  }, 200);
 });
 
 // Gancho de desarrollo: permite inspeccionar y simular estado desde la

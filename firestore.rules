@@ -29,7 +29,11 @@ service cloud.firestore {
         && request.resource.data.creator is string
         && request.resource.data.creator.size() >= 1
         && request.resource.data.creator.size() <= 50;
-      allow update, delete: if false;
+      // El documento del tablero no se edita desde el cliente.
+      allow update: if false;
+      // Solo quien creó el tablero puede eliminarlo (para todos).
+      allow delete: if request.auth != null
+        && resource.data.creatorId == request.auth.uid;
 
       match /items/{itemId} {
         allow read, delete: if request.auth != null;

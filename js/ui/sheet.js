@@ -5,7 +5,7 @@
 
 import { state } from "../state.js";
 import { ui } from "../bus.js";
-import { TYPES, PRIORITIES, REPEATS } from "../model.js";
+import { TYPES, PRIORITIES, REPEATS, makeChecklistItem } from "../model.js";
 import { $, el, field } from "./dom.js";
 import { saveItem, addCategory } from "../store.js";
 
@@ -60,6 +60,7 @@ function renderSheet() {
     due: init?.due || _defaults.due || "",
     repeat: init?.repeat || "no",
     preAlert: init?.preAlert || "no",
+    checklist: Array.isArray(init?.checklist) ? init.checklist.map((c) => ({ ...c })) : [],
   };
   let cats = [...state.categories];
 
@@ -159,6 +160,9 @@ function renderSheet() {
     detailInput.value = form.detail;
     sheet.append(field("Detalles (Opcional)", detailInput));
 
+    // Objetivos (checklist) — disponible para todos los tipos
+    sheet.append(field("Objetivos (Opcional)", buildChecklistEditor()));
+
     // Fecha límite (no se muestra en Notas)
     if (form.type !== "nota") {
       const dateInput = el("input", { type: "datetime-local", class: "pt-date", value: form.due,
@@ -190,6 +194,56 @@ function renderSheet() {
       }
     }
 
+    /* Editor de objetivos. Se redibuja solo (sin llamar a build())
+     * para no perder el foco del campo de texto mientras se escribe. */
+    function buildChecklistEditor() {
+      const wrap = el("div", { class: "pt-chk-editor" });
+
+      const repaint = () => {
+        const nuevo = buildChecklistEditor();
+        wrap.replaceWith(nuevo);
+      };
+
+      form.checklist.forEach((c, idx) => {
+        wrap.append(el("div", { class: "pt-chk-row" }, [
+          el("button", {
+            type: "button",
+            class: "pt-chk-box" + (c.done ? " on" : ""),
+            "aria-label": c.done ? "Marcar como pendiente" : "Marcar como hecho",
+            onclick: () => { form.checklist[idx].done = !c.done; repaint(); },
+          }, c.done ? "✓" : ""),
+          el("input", {
+            class: "pt-chk-text" + (c.done ? " done" : ""),
+            value: c.text,
+            maxlength: "200",
+            placeholder: "Objetivo...",
+            oninput: (e) => { form.checklist[idx].text = e.target.value; },
+          }),
+          el("button", {
+            type: "button",
+            class: "pt-chk-del",
+            "aria-label": "Quitar objetivo",
+            onclick: () => { form.checklist.splice(idx, 1); repaint(); },
+          }, "✕"),
+        ]));
+      });
+
+      wrap.append(el("button", {
+        type: "button",
+        class: "pt-chk-add",
+        onclick: () => {
+          form.checklist.push(makeChecklistItem(""));
+          repaint();
+          // Enfocar el objetivo recién creado
+          const campos = document.querySelectorAll("#sheet-root .pt-chk-text");
+          const ultimo = campos[campos.length - 1];
+          if (ultimo) ultimo.focus();
+        },
+      }, "+ Añadir objetivo"));
+
+      return wrap;
+    }
+
     // Botones de acción
     const err = el("div", { class: "pt-err", style: { display: "none" } }, "El título es obligatorio.");
     const saveBtn = el("button", { class: "pt-save", onclick: () => {
@@ -200,6 +254,8 @@ function renderSheet() {
         due: form.type === "nota" ? "" : form.due,
         repeat: form.type !== "nota" && form.due ? form.repeat : "no",
         preAlert: form.type !== "nota" && form.due ? form.preAlert : "no",
+        // Descartar objetivos vacíos
+        checklist: form.checklist.filter((c) => c.text.trim()),
       });
       closeSheet();
       ui.render();

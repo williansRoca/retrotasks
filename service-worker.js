@@ -14,7 +14,7 @@
  *  - Lo demas: network-first con fallback a cache.
  * ============================================================ */
 
-const CACHE_VERSION = "retrotasks-v12";
+const CACHE_VERSION = "retrotasks-v20";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -30,17 +30,21 @@ const APP_SHELL = [
   "./js/model.js",
   "./js/notifications.js",
   "./js/sound.js",
+  "./js/settings.js",
   "./js/state.js",
   "./js/store.js",
   "./js/theme.js",
   "./js/ui/alerts.js",
   "./js/ui/auth-screen.js",
   "./js/ui/boards.js",
+  "./js/ui/workspace.js",
   "./js/ui/calendar.js",
   "./js/ui/dom.js",
+  "./js/ui/guide.js",
   "./js/ui/home.js",
   "./js/ui/notify.js",
   "./js/ui/profile.js",
+  "./js/ui/settings.js",
   "./js/ui/sheet.js",
   "./js/ui/shell.js",
   // Firebase alojado localmente (js/vendor): sin CDN, la app

@@ -59,6 +59,33 @@ export function showToast(message) {
   container.appendChild(toast);
 }
 
+// Toast con acción (p. ej. "Deshacer"). Se cierra al pulsar la
+// acción o cuando termina su animación de salida.
+export function showActionToast(message, actionLabel, onAction) {
+  let container = $(".pt-toast-container");
+  if (!container) {
+    container = el("div", { class: "pt-toast-container" });
+    document.body.appendChild(container);
+  }
+
+  const toast = el("div", { class: "pt-toast" }, [
+    el("span", { style: { flex: "1" } }, message),
+    el("button", {
+      class: "pt-toast-action",
+      onclick: () => { toast.remove(); onAction(); },
+    }, actionLabel),
+  ]);
+
+  toast.addEventListener("animationend", (e) => {
+    if (e.animationName === "pt-toast-out") {
+      toast.remove();
+      if (container.children.length === 0) container.remove();
+    }
+  });
+
+  container.appendChild(toast);
+}
+
 // Pulso visual sobre una tarjeta recién completada
 export function pulseCard(id) {
   requestAnimationFrame(() => {
