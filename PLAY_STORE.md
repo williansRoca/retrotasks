@@ -115,6 +115,18 @@ Todo lo demás (ubicación, contactos, historial, datos financieros, salud): **N
 
 ---
 
+## 3.b Nivel de API objetivo (requisito con plazo)
+
+Google Play exige que la app apunte a un nivel de API con menos de un año de
+antigüedad. **Plazo: 31 de agosto de 2026** para Android 16 (API 36).
+
+Estado actual (v2.2): **cumplido** — `targetSdkVersion 36`, `compileSdkVersion 36`
+en `android/variables.gradle`, con Android Gradle Plugin 8.10.1 (el 8.7.2 anterior
+no soportaba API 36).
+
+Cada año habrá que repetirlo: subir esos dos valores y, si el build falla,
+también el AGP en `android/build.gradle`.
+
 ## 4. Checklist de lanzamiento (en orden)
 
 1. [ ] **Commit + push** de todo lo pendiente.
