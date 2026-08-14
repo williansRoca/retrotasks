@@ -11,7 +11,7 @@ import { setMeta } from "../db.js";
 import { THEMES, changeTheme } from "../theme.js";
 import { settings, updateSetting, FONT_SIZES } from "../settings.js";
 import { playSound } from "../sound.js";
-import { $, el } from "./dom.js";
+import { $, el, enableSheetSwipeClose } from "./dom.js";
 
 export function closeSettings() {
   const r = $("#settings-root");
@@ -23,6 +23,7 @@ export function openSettings() {
 
   const root = el("div", { class: "pt-overlay", id: "settings-root", onclick: closeSettings });
   const sheet = el("div", { class: "pt-sheet", onclick: (e) => e.stopPropagation() });
+  enableSheetSwipeClose(sheet, closeSettings);
 
   const repaint = () => { build(); };
 

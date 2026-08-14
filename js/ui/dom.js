@@ -59,6 +59,50 @@ export function showToast(message) {
   container.appendChild(toast);
 }
 
+/* Habilita cerrar un bottom sheet arrastrándolo hacia abajo.
+ * Reutilizable por cualquier hoja modal (configuración, guía, etc.). */
+export function enableSheetSwipeClose(sheet, closeFn) {
+  let startY = 0, currentY = 0, dragging = false;
+
+  sheet.addEventListener("touchstart", (e) => {
+    // Solo iniciar el arrastre si la hoja está en su tope (no scrolleada)
+    if (sheet.scrollTop > 0) { dragging = false; return; }
+    startY = e.touches[0].clientY;
+    currentY = startY;
+    dragging = true;
+  }, { passive: true });
+
+  sheet.addEventListener("touchmove", (e) => {
+    if (!dragging) return;
+    currentY = e.touches[0].clientY;
+    const dy = currentY - startY;
+    if (dy > 0) {
+      sheet.style.transform = `translateY(${dy}px)`;
+      sheet.style.transition = "none";
+    }
+  }, { passive: true });
+
+  sheet.addEventListener("touchend", () => {
+    if (!dragging) return;
+    dragging = false;
+    const dy = currentY - startY;
+    if (dy > 110) {
+      // Deslizar fuera de pantalla antes de cerrar (animación de salida)
+      sheet.style.transition = "transform 0.22s ease-in";
+      sheet.style.transform = "translateY(100%)";
+      const overlay = sheet.parentElement;
+      if (overlay) overlay.style.transition = "opacity 0.22s ease-in";
+      if (overlay) overlay.style.opacity = "0";
+      setTimeout(closeFn, 210);
+    } else {
+      // Volver a su sitio con un pequeño rebote
+      sheet.style.transform = "";
+      sheet.style.transition = "transform 0.25s cubic-bezier(0.34, 1.2, 0.64, 1)";
+    }
+    startY = 0; currentY = 0;
+  });
+}
+
 // Toast con acción (p. ej. "Deshacer"). Se cierra al pulsar la
 // acción o cuando termina su animación de salida.
 export function showActionToast(message, actionLabel, onAction) {

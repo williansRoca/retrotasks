@@ -60,7 +60,10 @@ export function createItem(data) {
     preAlert: data.preAlert || "no", // minutos de aviso previo: no|10|30|60|1440
     // Lista de objetivos: [{ id, text, done }]
     checklist: Array.isArray(data.checklist) ? data.checklist : [],
+    // Notificación tipo alarma (sonido fuerte e insistente)
+    alarm: data.alarm === true,
     done: false,
+    archived: false, // misiones archivadas: fuera de la vista principal
     createdAt: now,
     updatedAt: now,
 

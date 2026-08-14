@@ -82,34 +82,130 @@ export function toggleDone(id) {
     ? touchItem(item, { due: nextDate(item.due, item.repeat), lastUpdatedBy: user })
     : touchItem(item, { done: !item.done, lastUpdatedBy: user });
 
-  persistItem(updated);
+  // Actualización optimista: la UI refleja el cambio al instante,
+  // sin depender de que llegue el eco de Firestore.
+  state.items = state.items.map((i) => (i.id === id ? updated : i));
+  ui.render();
 
   if (willBeDone) {
     sfx("complete");
     pulseCard(id);
     createXpParticles(id);
   }
+  persistItem(updated);
 }
 
-// Marca o desmarca un objetivo de la checklist de una misión.
+/* ---------- Selección múltiple (mantener presionado) ---------- */
+
+export function enterSelectMode(id) {
+  state.selectMode = true;
+  state.selected = id ? [id] : [];
+  ui.render();
+}
+
+export function exitSelectMode() {
+  state.selectMode = false;
+  state.selected = [];
+  ui.render();
+}
+
+export function toggleSelected(id) {
+  state.selected = state.selected.includes(id)
+    ? state.selected.filter((x) => x !== id)
+    : [...state.selected, id];
+  if (state.selected.length === 0) state.selectMode = false;
+  ui.render();
+}
+
+// Aplica una acción a todas las misiones seleccionadas.
+export function bulkAction(accion) {
+  const ids = [...state.selected];
+  if (ids.length === 0) return;
+  const user = state.syncNickname || "Anónimo";
+
+  if (accion === "delete") {
+    if (!window.confirm(`¿Eliminar ${ids.length} misión(es)? No se puede deshacer en lote.`)) return;
+  }
+
+  ids.forEach((id) => {
+    const item = state.items.find((i) => i.id === id);
+    if (!item) return;
+    if (accion === "delete") {
+      unpersistItem(id, item.title);
+    } else {
+      const cambios = accion === "archive" ? { archived: true }
+        : accion === "unarchive" ? { archived: false }
+        : accion === "done" ? { done: true }
+        : accion === "undone" ? { done: false } : null;
+      if (!cambios) return;
+      const updated = touchItem(item, { ...cambios, lastUpdatedBy: user });
+      state.items = state.items.map((i) => (i.id === id ? updated : i));
+      persistItem(updated);
+    }
+  });
+
+  if (accion === "delete") {
+    state.items = state.items.filter((i) => !ids.includes(i.id));
+  }
+  sfx(accion === "done" ? "complete" : "delete");
+  showToast(`${ids.length} misión(es) actualizada(s)`);
+  exitSelectMode();
+}
+
+/* Marca o desmarca un objetivo de la checklist.
+ *
+ * NO llama a ui.render(): reconstruir toda la lista en cada toque
+ * provocaba que, al marcar varios objetivos rápido, los toques
+ * cayeran sobre tarjetas a medio reconstruir y se perdieran (solo
+ * quedaba uno marcado). El llamador actualiza la casilla en el DOM
+ * directamente; aquí solo actualizamos el estado y persistimos.
+ * Devuelve el nuevo estado del objetivo (true = hecho) o null. */
 export function toggleChecklistItem(itemId, checkId) {
   const item = state.items.find((i) => i.id === itemId);
-  if (!item || !Array.isArray(item.checklist)) return;
+  if (!item || !Array.isArray(item.checklist)) return null;
 
-  const checklist = item.checklist.map((c) =>
-    c.id === checkId ? { ...c, done: !c.done } : c
-  );
+  let nuevoEstado = null;
+  const checklist = item.checklist.map((c) => {
+    if (c.id !== checkId) return c;
+    nuevoEstado = !c.done;
+    return { ...c, done: nuevoEstado };
+  });
+  if (nuevoEstado === null) return null;
+
   const updated = touchItem(item, {
     checklist,
     lastUpdatedBy: state.syncNickname || "Anónimo",
   });
-
-  // Respuesta inmediata en pantalla; la nube confirma después.
   state.items = state.items.map((i) => (i.id === itemId ? updated : i));
-  ui.render();
 
-  sfx("complete");
+  if (nuevoEstado) sfx("complete");
   persistItem(updated);
+  return nuevoEstado;
+}
+
+/* Archiva o desarchiva una misión (la saca de la vista principal
+ * sin borrarla). */
+export function setArchived(id, archived) {
+  const item = state.items.find((i) => i.id === id);
+  if (!item) return;
+  const updated = touchItem(item, {
+    archived,
+    lastUpdatedBy: state.syncNickname || "Anónimo",
+  });
+  state.items = state.items.map((i) => (i.id === id ? updated : i));
+  ui.render();
+  persistItem(updated);
+}
+
+export function archiveItem(id) {
+  const item = state.items.find((i) => i.id === id);
+  setArchived(id, true);
+  sfx("delete");
+  if (item) {
+    showActionToast(`📦 "${item.title}" archivada`, "Deshacer", () => {
+      setArchived(id, false);
+    });
+  }
 }
 
 export function deleteItem(id) {

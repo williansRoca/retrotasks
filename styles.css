@@ -568,15 +568,22 @@ input, textarea { font-family: inherit; }
   border-radius: var(--radius);
   user-select: none;
   pointer-events: none;
+  /* Ocultos salvo cuando se arrastra en su dirección. Evita que se
+     vean detrás de tarjetas hechas (semitransparentes) o que ambos
+     fondos se solapen mostrando siempre el mismo texto. */
+  opacity: 0;
 }
+.pt-card-swipe-bg.show { opacity: 1; }
 
+/* Fondo revelado al deslizar a la DERECHA → Eliminar (rojo) */
 .pt-swipe-left {
-  background: var(--green);
+  background: var(--red);
   justify-content: flex-start;
 }
 
+/* Fondo revelado al deslizar a la IZQUIERDA → Archivar (azul) */
 .pt-swipe-right {
-  background: var(--red);
+  background: var(--blue);
   justify-content: flex-end;
 }
 
@@ -2006,3 +2013,75 @@ body.high-contrast :focus-visible { outline: 4px solid var(--accent); outline-of
 .pt-guide-welcome { text-align: center; margin-bottom: 18px; }
 .pt-guide-welcome-icon { font-size: 40px; margin-bottom: 8px; }
 .pt-guide-welcome h2 { margin-bottom: 10px; }
+
+/* ============================================================
+ * SELECCIÓN MÚLTIPLE Y ARCHIVO
+ * ============================================================ */
+/* Barra de acciones de selección */
+.pt-selbar {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 8px 10px; margin-bottom: 12px;
+  position: sticky; top: 4px; z-index: 4;
+}
+.pt-selbar-x {
+  flex: 0 0 34px; height: 34px;
+  border: 2px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-surface); color: var(--text-primary);
+  font-weight: 900;
+}
+.pt-selbar-count { flex: 1; font-size: 14px; font-weight: 700; }
+.pt-selbar-acts { display: flex; gap: 6px; }
+.pt-selbar-btn {
+  flex: 0 0 40px; height: 40px; font-size: 17px;
+  border: 2px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-surface);
+}
+.pt-selbar-btn.del { border-color: var(--red); }
+.pt-selbar-btn:active { transform: translateY(2px); }
+
+/* Tarjeta seleccionada */
+.pt-card.pt-selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+.pt-sel-check {
+  flex: 0 0 32px; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-elevated);
+  border-right: 2px solid var(--border);
+  color: var(--bg-deep); font-weight: 900; font-size: 16px;
+}
+.pt-sel-check.on { background: var(--accent); }
+
+/* Banner de vista de archivadas */
+.pt-archive-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; background: var(--bg-elevated);
+  border: 2px solid var(--border); border-radius: var(--radius);
+  padding: 8px 12px; margin-bottom: 12px;
+  font-size: 13px; font-weight: 700; color: var(--text-muted);
+}
+.pt-archive-back {
+  padding: 6px 12px; font-size: 12px; font-weight: 800;
+  background: var(--accent); color: var(--bg-deep);
+  border-radius: var(--radius);
+}
+
+/* Toggle de notificación tipo alarma (formulario) */
+.pt-alarm-toggle {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+}
+.pt-alarm-toggle.on { border-color: var(--accent); }
+.pt-alarm-toggle-icon { font-size: 20px; }
+.pt-alarm-toggle-text { flex: 1; text-align: left; font-size: 14px; font-weight: 700; }
+
+/* Distintivo de alarma en la tarjeta */
+.pt-alarm-badge {
+  font-size: 11px; padding: 2px 6px;
+  background: var(--accent); color: var(--bg-deep);
+  border-radius: 3px; font-weight: 800;
+}

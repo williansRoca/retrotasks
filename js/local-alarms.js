@@ -17,8 +17,20 @@
  * En Web el plugin no existe: este módulo se convierte en no-op.
  * ============================================================ */
 
+import { scheduleNativeAlarm, cancelNativeAlarm, hasNativeAlarm } from "./native-alarm.js";
+
 const hasPlugin = () =>
   window.Capacitor && window.Capacitor.isPluginAvailable("LocalNotifications");
+
+// Recuerda qué ids de alarma nativa se programaron, para cancelarlos
+// al reprogramar (misiones completadas, borradas, archivadas, etc.).
+function loadNativeIds() {
+  try { return JSON.parse(localStorage.getItem("rt-native-alarm-ids") || "[]"); }
+  catch { return []; }
+}
+function saveNativeIds(ids) {
+  try { localStorage.setItem("rt-native-alarm-ids", JSON.stringify(ids)); } catch {}
+}
 
 // El id de notificación de Android es un entero de 32 bits; los ids
 // de items son strings. Hash FNV-1a acotado a int31 positivo.
@@ -31,7 +43,34 @@ function numericId(strId) {
   return (h >>> 1) || 1; // positivo y nunca 0
 }
 
+// IDs de canales de notificación (Android). Una vez creado un canal,
+// su importancia y sonido los controla el usuario en Ajustes.
+const CH_DEFAULT = "rt_reminders";
+const CH_ALARM = "rt_alarm";
+
 let permissionGranted = null; // cache de permiso dentro de la sesión
+let channelsReady = false;
+
+// Crea los canales: uno normal y uno tipo alarma (alta prioridad,
+// sonido de alarma y vibración insistente).
+async function ensureChannels(LN) {
+  if (channelsReady || typeof LN.createChannel !== "function") return;
+  try {
+    await LN.createChannel({
+      id: CH_DEFAULT, name: "Recordatorios",
+      description: "Avisos de vencimiento de misiones",
+      importance: 4, vibration: true, visibility: 1,
+    });
+    await LN.createChannel({
+      id: CH_ALARM, name: "Alarmas de misiones",
+      description: "Avisos importantes con sonido de alarma",
+      importance: 5, sound: "alarm", vibration: true, visibility: 1, lights: true,
+    });
+    channelsReady = true;
+  } catch (e) {
+    console.warn("No se pudieron crear los canales de notificación:", e);
+  }
+}
 
 async function ensurePermission(LN) {
   if (permissionGranted !== null) return permissionGranted;
@@ -79,6 +118,7 @@ async function syncLocalAlarms(items) {
 
   try {
     if (!(await ensurePermission(LN))) return;
+    await ensureChannels(LN);
     await ensureExactAlarms(LN);
 
     // Cancelar todo lo pendiente (reprogramación total idempotente)
@@ -95,35 +135,59 @@ async function syncLocalAlarms(items) {
     const now = Date.now();
     const etiquetaPrevio = { "10": "10 minutos", "30": "30 minutos", "60": "1 hora", "1440": "1 día" };
 
+    // Cancelar las alarmas nativas programadas antes (reprogramación total)
+    const prevNativeIds = loadNativeIds();
+    if (hasNativeAlarm()) {
+      for (const nid of prevNativeIds) await cancelNativeAlarm(nid);
+    }
+    const nuevasNativeIds = [];
+
     const notifications = [];
-    items
-      .filter((i) => i.type !== "nota" && i.due && !i.done)
+    const candidatas = items
+      .filter((i) => i.type !== "nota" && i.due && !i.done && !i.archived)
       .map((i) => ({ item: i, at: new Date(i.due).getTime() }))
       .filter(({ at }) => !isNaN(at) && at > now)
       .sort((a, b) => a.at - b.at)
-      .slice(0, 30) // margen prudente frente a límites del sistema
-      .forEach(({ item, at }) => {
-        // Aviso previo configurado por el usuario
-        const preMin = parseInt(item.preAlert, 10);
-        if (preMin > 0) {
-          const preAt = at - preMin * 60000;
-          if (preAt > now) {
-            notifications.push({
-              id: numericId(item.id + "::pre"),
-              title: "⏳ RetroTasks: Misión próxima",
-              body: `"${item.title}" vence en ${etiquetaPrevio[item.preAlert] || `${preMin} min`}.`,
-              schedule: { at: new Date(preAt), allowWhileIdle: true },
-            });
-          }
+      .slice(0, 30); // margen prudente frente a límites del sistema
+
+    for (const { item, at } of candidatas) {
+      // Alarma real (pantalla completa) si el equipo lo soporta; si no,
+      // se usa el canal de alta prioridad como respaldo.
+      const esAlarma = item.alarm === true;
+      const usarNativa = esAlarma && hasNativeAlarm();
+
+      // Aviso previo: siempre como notificación normal
+      const preMin = parseInt(item.preAlert, 10);
+      if (preMin > 0) {
+        const preAt = at - preMin * 60000;
+        if (preAt > now) {
+          notifications.push({
+            id: numericId(item.id + "::pre"),
+            title: esAlarma ? "⏰ RetroTasks: ¡Misión próxima!" : "⏳ RetroTasks: Misión próxima",
+            body: `"${item.title}" vence en ${etiquetaPrevio[item.preAlert] || `${preMin} min`}.`,
+            schedule: { at: new Date(preAt), allowWhileIdle: true },
+            channelId: esAlarma ? CH_ALARM : CH_DEFAULT,
+          });
         }
-        // Notificación del vencimiento
+      }
+
+      // Vencimiento
+      if (usarNativa) {
+        const nid = numericId(item.id);
+        await scheduleNativeAlarm(nid, at, item.title);
+        nuevasNativeIds.push(nid);
+      } else {
         notifications.push({
           id: numericId(item.id),
-          title: "🚨 RetroTasks: Misión por vencer",
+          title: esAlarma ? "⏰ RetroTasks: ¡ALARMA DE MISIÓN!" : "🚨 RetroTasks: Misión por vencer",
           body: `¡El tiempo límite para "${item.title}" ha llegado!`,
           schedule: { at: new Date(at), allowWhileIdle: true },
+          channelId: esAlarma ? CH_ALARM : CH_DEFAULT,
         });
-      });
+      }
+    }
+
+    saveNativeIds(nuevasNativeIds);
 
     if (notifications.length) {
       await LN.schedule({ notifications });

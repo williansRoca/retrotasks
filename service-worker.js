@@ -14,7 +14,7 @@
  *  - Lo demas: network-first con fallback a cache.
  * ============================================================ */
 
-const CACHE_VERSION = "retrotasks-v20";
+const CACHE_VERSION = "retrotasks-v25";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -28,6 +28,7 @@ const APP_SHELL = [
   "./js/firebase.js",
   "./js/local-alarms.js",
   "./js/model.js",
+  "./js/native-alarm.js",
   "./js/notifications.js",
   "./js/sound.js",
   "./js/settings.js",

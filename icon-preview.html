@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Preview íconos acción</title>
+<style>
+  body { margin:0; background:#1A1208; color:#FFD24A; font-family:system-ui,sans-serif; padding:24px; }
+  h1 { font-size:16px; color:#F5EDD4; }
+  .grid { display:grep; display:flex; flex-wrap:wrap; gap:20px; margin-bottom:32px; }
+  .cell { display:flex; flex-direction:column; align-items:center; gap:8px; width:120px; }
+  .label { font-size:11px; color:#C49A20; }
+  .sizes { display:flex; align-items:flex-end; gap:10px; }
+  .swatch { background:#2A1E10; border:1px solid #4A3826; padding:10px; border-radius:6px; }
+  .red { color:#FF6B6B; }
+  .accent { color:#4FC3F7; }
+  .green { color:#A8E063; }
+</style>
+</head>
+<body>
+<h1>Grupo ACCIÓN — pixel-art (currentColor)</h1>
+<div class="grid" id="grid24"></div>
+<h1>A tamaño real (16 / 20 / 24 px) sobre distintos acentos</h1>
+<div class="grid" id="gridsizes"></div>
+
+<script type="module">
+import { icon, iconNames } from "./js/ui/icons.js";
+
+const g24 = document.getElementById("grid24");
+for (const name of iconNames) {
+  const cell = document.createElement("div");
+  cell.className = "cell";
+  cell.innerHTML =
+    `<div class="swatch">${icon(name, { size: 64 })}</div><div class="label">${name}</div>`;
+  g24.appendChild(cell);
+}
+
+const gs = document.getElementById("gridsizes");
+const colors = ["", "red", "accent", "green"];
+for (const name of iconNames) {
+  const cell = document.createElement("div");
+  cell.className = "cell";
+  const rows = colors.map(c =>
+    `<span class="${c}">${icon(name,{size:16})}${icon(name,{size:20})}${icon(name,{size:24})}</span>`
+  ).join(" ");
+  cell.innerHTML = `<div class="swatch sizes">${rows}</div><div class="label">${name}</div>`;
+  gs.appendChild(cell);
+}
+</script>
+</body>
+</html>

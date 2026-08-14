@@ -60,6 +60,7 @@ function renderSheet() {
     due: init?.due || _defaults.due || "",
     repeat: init?.repeat || "no",
     preAlert: init?.preAlert || "no",
+    alarm: init?.alarm === true,
     checklist: Array.isArray(init?.checklist) ? init.checklist.map((c) => ({ ...c })) : [],
   };
   let cats = [...state.categories];
@@ -191,6 +192,27 @@ function renderSheet() {
             : null,
         ]);
         sheet.append(field("Aviso Previo", pre));
+
+        // Notificación tipo alarma (canal de alta prioridad con sonido fuerte)
+        const alarmToggle = el("button", {
+          type: "button",
+          class: "pt-alarm-toggle" + (form.alarm ? " on" : ""),
+          "aria-pressed": String(form.alarm),
+          onclick: () => { form.alarm = !form.alarm; build(); },
+        }, [
+          el("span", { class: "pt-alarm-toggle-icon" }, form.alarm ? "⏰" : "🔔"),
+          el("span", { class: "pt-alarm-toggle-text" },
+            form.alarm ? "Alarma activada (sonido fuerte)" : "Notificación normal"),
+          el("span", { class: "pt-switch" + (form.alarm ? " on" : "") }, [
+            el("span", { class: "pt-switch-knob" }),
+          ]),
+        ]);
+        sheet.append(field("Tipo de aviso", el("div", {}, [
+          alarmToggle,
+          form.alarm
+            ? el("div", { class: "pt-hint" }, "Sonará como una alarma, más difícil de pasar por alto. Ideal para lo importante.")
+            : null,
+        ])));
       }
     }
 
@@ -254,6 +276,7 @@ function renderSheet() {
         due: form.type === "nota" ? "" : form.due,
         repeat: form.type !== "nota" && form.due ? form.repeat : "no",
         preAlert: form.type !== "nota" && form.due ? form.preAlert : "no",
+        alarm: form.type !== "nota" && form.due ? form.alarm : false,
         // Descartar objetivos vacíos
         checklist: form.checklist.filter((c) => c.text.trim()),
       });

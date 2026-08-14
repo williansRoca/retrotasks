@@ -36,6 +36,11 @@ export const state = {
   filtersOpen: false,
   editing: null,
   sheetOpen: false,
+  showArchived: false,        // ver misiones archivadas en lugar de activas
+
+  // Selección múltiple (mantener presionado)
+  selectMode: false,
+  selected: [],               // ids de misiones seleccionadas
 
   // Cooperativo / Tableros
   activeBoardId: null,        // null = espacio personal
