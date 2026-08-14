@@ -16,7 +16,7 @@ import { renderBoardsView } from "./boards.js";
 import { renderAlertsView } from "./alerts.js";
 import { renderProfileView } from "./profile.js";
 import { renderAuthScreen } from "./auth-screen.js";
-import { renderWorkspaceChip } from "./workspace.js";
+import { renderWorkspaceChip, renderWorkspaceStripe } from "./workspace.js";
 
 const soundOnSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter" style="width: 18px; height: 18px;"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`;
 const soundOffSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter" style="width: 18px; height: 18px;"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>`;
@@ -70,6 +70,9 @@ export function renderShell() {
     ]),
   ]);
 
+  // Franja de color del tablero activo (refuerzo permanente)
+  const stripe = renderWorkspaceStripe();
+
   // Contenedores dinámicos
   const filters = el("div", { class: "pt-filters", id: "filters" });
   const list = el("main", { class: "pt-list", id: "list" });
@@ -88,7 +91,9 @@ export function renderShell() {
     createNavItem("profile", `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"><path d="M12 2C9.8 2 8 3.8 8 6C8 8.2 9.8 10 12 10C14.2 10 16 8.2 16 6C16 3.8 14.2 2 12 2ZM6 20C6 16.7 8.7 14 12 14C15.3 14 18 16.7 18 20V22H6V20Z"/></svg>`, "Perfil")
   ]);
 
-  app.append(header, filters, list, fab, nav);
+  app.append(header);
+  if (stripe) app.append(stripe);
+  app.append(filters, list, fab, nav);
 }
 
 // Crea un ítem para la barra de navegación (inyectando SVG nativo)

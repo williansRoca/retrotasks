@@ -56,7 +56,7 @@ export function detectAndNotifyChanges(oldItems, newItems) {
   added.forEach(item => {
     const creator = item.owner || "Alguien";
     if (creator.trim().toLowerCase() !== nickname) {
-      notifyEvent("➕ Tarea nueva", `👤 ${creator} creó: "${item.title}"`, "create");
+      notifyEvent("Tarea nueva", `👤 ${creator} creó: "${item.title}"`, "create");
     }
   });
 
@@ -64,7 +64,7 @@ export function detectAndNotifyChanges(oldItems, newItems) {
   const deleted = oldItems.filter(o => !newItems.some(n => n.id === o.id));
   deleted.forEach(item => {
     if (state.lastDeletedId !== item.id) {
-      notifyEvent("🗑️ Tarea eliminada", `Se eliminó: "${item.title}"`, "delete");
+      notifyEvent("Tarea eliminada", `Se eliminó: "${item.title}"`, "delete");
     }
   });
   state.lastDeletedId = null;
@@ -77,12 +77,12 @@ export function detectAndNotifyChanges(oldItems, newItems) {
       if (updater.trim().toLowerCase() !== nickname) {
         if (o.done !== n.done) {
           if (n.done) {
-            notifyEvent("✅ Tarea completada", `👤 ${updater} completó: "${n.title}"`, "complete");
+            notifyEvent("Tarea completada", `👤 ${updater} completó: "${n.title}"`, "complete");
           } else {
-            notifyEvent("🔄 Tarea reactivada", `👤 ${updater} desmarcó: "${n.title}"`);
+            notifyEvent("Tarea reactivada", `👤 ${updater} desmarcó: "${n.title}"`);
           }
         } else if (o.updatedAt !== n.updatedAt) {
-          notifyEvent("✏️ Tarea editada", `👤 ${updater} editó: "${n.title}"`);
+          notifyEvent("Tarea editada", `👤 ${updater} editó: "${n.title}"`);
         }
       }
     }

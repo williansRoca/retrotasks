@@ -31,7 +31,9 @@ import { initTheme } from "./theme.js";
 import { initSettings } from "./settings.js";
 import { initPushNotifications } from "./notifications.js";
 import { initAlarms } from "./alarms.js";
-import { setupUserItemsSubscription, setupBoardSubscription, loadUserBoards } from "./store.js";
+import {
+  setupUserItemsSubscription, setupBoardSubscription, loadUserBoards, refreshBoardAccent,
+} from "./store.js";
 import { render, renderShell } from "./ui/shell.js";
 import { loadUserPreferences } from "./ui/profile.js";
 import "./ui/notify.js"; // registra window.showLocalToast para FCM
@@ -77,6 +79,8 @@ async function init() {
           state.activeBoardId = null;
         }
       }
+      // Acento del tablero activo (o el del tema, si es el personal)
+      refreshBoardAccent();
 
       // Inicializar notificaciones push nativas si está en Android
       initPushNotifications(user.uid);

@@ -12,6 +12,7 @@ import { THEMES, changeTheme } from "../theme.js";
 import { settings, updateSetting, FONT_SIZES } from "../settings.js";
 import { playSound } from "../sound.js";
 import { $, el, enableSheetSwipeClose } from "./dom.js";
+import { icon } from "./icons.js";
 
 export function closeSettings() {
   const r = $("#settings-root");
@@ -42,14 +43,15 @@ export function openSettings() {
         THEMES.map((theme) =>
           el("button", {
             class: "pt-theme-dot" + (activeThemeId === theme.id ? " active" : ""),
-            style: { background: theme.bg },
+            style: { background: theme.bg, color: theme.accent },
             title: theme.label,
             onclick: async () => {
               await changeTheme(theme.id, setMeta);
               repaint();
               ui.render(true);
             },
-          }, theme.emoji)
+            html: icon(theme.icon, 20),
+          })
         )
       ),
       el("div", { class: "pt-set-hint" },
@@ -108,7 +110,7 @@ export function openSettings() {
     /* ---------- Acerca de ---------- */
     sheet.append(seccion("Acerca de"));
     sheet.append(el("div", { class: "pt-set-about" }, [
-      el("div", {}, "RetroTasks · versión 2.1"),
+      el("div", {}, "RetroTasks · versión 2.2"),
       el("a", {
         href: "https://williansroca.github.io/retrotasks/privacidad.html",
         target: "_blank", rel: "noopener",

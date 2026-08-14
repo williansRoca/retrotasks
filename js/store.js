@@ -28,6 +28,9 @@ import { sfx, showToast, showActionToast, pulseCard, createXpParticles } from ".
 import { detectAndNotifyChanges } from "./ui/notify.js";
 import { scheduleLocalAlarms } from "./local-alarms.js";
 import { settings } from "./settings.js";
+import {
+  applyBoardAccent, boardStyle, colorFromId, iconFromId, pickFreeColor,
+} from "./board-theme.js";
 
 /* ---------- Persistencia unificada ---------- */
 
@@ -311,6 +314,16 @@ async function saveMemberships() {
   if (state.user) await setUserBoards(state.user.uid, state.boards);
 }
 
+/* Aplica el color del espacio activo como acento de la interfaz.
+ * Se llama al cambiar de tablero y al iniciar sesión. */
+export function refreshBoardAccent() {
+  const board = state.activeBoardId
+    ? state.boards.find((b) => b.id === state.activeBoardId)
+    : null;
+  // Si el tablero activo ya no está en las membresías, sin acento.
+  applyBoardAccent(state.activeBoardId ? boardStyle(board || { id: state.activeBoardId }).color : null);
+}
+
 /* Cambia de espacio de trabajo SIN abandonar ningún tablero:
  * boardId = null  → espacio personal
  * boardId = "RT-…" → ese tablero compartido */
@@ -321,6 +334,7 @@ export async function switchWorkspace(boardId) {
   }
   state.activeBoardId = boardId;
   await setActiveBoardId(boardId);
+  refreshBoardAccent();
 
   if (boardId) {
     state.items = [];       // evita mostrar las misiones del espacio anterior
@@ -333,7 +347,7 @@ export async function switchWorkspace(boardId) {
   }
 }
 
-export async function handleCreateBoard(boardName) {
+export async function handleCreateBoard(boardName, style = {}) {
   if (!state.syncNickname.trim()) {
     showToast("⚠️ Necesitas un nombre de perfil para crear un tablero.");
     return;
@@ -344,12 +358,17 @@ export async function handleCreateBoard(boardName) {
   }
   const name = (boardName || "").trim() || "Tablero compartido";
   const newBoardId = makeBoardId();
+  // Identidad elegida por el creador; si no eligió, se deriva del
+  // código evitando colores que ya use en otros tableros suyos.
+  const usados = state.boards.map((b) => boardStyle(b).color);
+  const color = style.color || pickFreeColor(newBoardId, usados);
+  const icon = style.icon || iconFromId(newBoardId);
   state.syncStatusMessage = "Creando tablero...";
   ui.render();
 
-  const success = await createBoard(newBoardId, state.syncNickname, state.user?.uid, name);
+  const success = await createBoard(newBoardId, state.syncNickname, state.user?.uid, name, { color, icon });
   if (success) {
-    state.boards = [...state.boards, { id: newBoardId, name }];
+    state.boards = [...state.boards, { id: newBoardId, name, color, icon }];
     await saveMemberships();
     state.syncStatusMessage = "";
     await switchWorkspace(newBoardId);
@@ -358,6 +377,20 @@ export async function handleCreateBoard(boardName) {
     state.syncStatusMessage = "Error al crear el tablero. Revisa tu conexión.";
   }
   ui.render();
+}
+
+/* Cambia el color o el ícono con que ESTE usuario ve un tablero.
+ * Es una preferencia local: no afecta a los demás participantes. */
+export async function setBoardStyle(boardId, { color, icon } = {}) {
+  state.boards = state.boards.map((b) =>
+    b.id === boardId
+      ? { ...b, color: color || b.color, icon: icon || b.icon }
+      : b
+  );
+  await saveMemberships();
+  refreshBoardAccent();
+  ui.renderShell();
+  ui.render(true);
 }
 
 export async function handleJoinBoard(boardIdInput) {
@@ -380,7 +413,17 @@ export async function handleJoinBoard(boardIdInput) {
 
   const info = await getBoardInfo(bId);
   if (info) {
-    state.boards = [...state.boards, { id: bId, name: info.name || bId }];
+    /* Hereda la identidad que definió quien creó el tablero. Si ese
+     * color ya lo usa otro tablero tuyo, se elige uno libre: dos
+     * tableros del mismo color anularían justamente la señal visual. */
+    const usados = state.boards.map((b) => boardStyle(b).color);
+    const heredado = info.color || colorFromId(bId);
+    state.boards = [...state.boards, {
+      id: bId,
+      name: info.name || bId,
+      color: usados.includes(heredado) ? pickFreeColor(bId, usados) : heredado,
+      icon: info.icon || iconFromId(bId),
+    }];
     await saveMemberships();
     state.syncStatusMessage = "";
     await switchWorkspace(bId);

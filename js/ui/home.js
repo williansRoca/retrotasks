@@ -12,6 +12,7 @@ import {
   enterSelectMode, toggleSelected, exitSelectMode, bulkAction,
 } from "../store.js";
 import { openSheet } from "./sheet.js";
+import { icon } from "./icons.js";
 
 /* ---------- Derivados ---------- */
 function visibleItems() {
@@ -39,7 +40,10 @@ export function renderHomeList() {
     list.append(renderSelectionBar());
   } else if (state.showArchived) {
     list.append(el("div", { class: "pt-archive-banner" }, [
-      el("span", {}, "📦 Viendo misiones archivadas"),
+      el("span", { class: "pt-badge-ico" }, [
+        el("span", { class: "rt-icon-wrap", html: icon("archive", 15) }),
+        el("span", {}, "Viendo misiones archivadas"),
+      ]),
       el("button", { class: "pt-archive-back", onclick: () => { state.showArchived = false; ui.render(); } }, "Volver"),
     ]));
   }
@@ -74,17 +78,25 @@ export function renderHomeList() {
 /* Barra de acciones cuando hay misiones seleccionadas */
 function renderSelectionBar() {
   const n = state.selected.length;
+  const selBtn = (iconName, title, accion, cls = "") =>
+    el("button", {
+      class: "pt-selbar-btn" + (cls ? " " + cls : ""), title,
+      "aria-label": title, onclick: () => bulkAction(accion),
+      html: icon(iconName, 20),
+    });
+
   return el("div", { class: "pt-selbar" }, [
-    el("button", { class: "pt-selbar-x", "aria-label": "Cancelar selección", onclick: exitSelectMode }, "✕"),
+    el("button", {
+      class: "pt-selbar-x", "aria-label": "Cancelar selección",
+      onclick: exitSelectMode, html: icon("close", 18),
+    }),
     el("span", { class: "pt-selbar-count" }, `${n} seleccionada${n === 1 ? "" : "s"}`),
     el("div", { class: "pt-selbar-acts" }, [
       state.showArchived
-        ? el("button", { class: "pt-selbar-btn", title: "Restaurar", onclick: () => bulkAction("unarchive") }, "♻️")
-        : el("button", { class: "pt-selbar-btn", title: "Marcar como hechas", onclick: () => bulkAction("done") }, "✓"),
-      !state.showArchived
-        ? el("button", { class: "pt-selbar-btn", title: "Archivar", onclick: () => bulkAction("archive") }, "📦")
-        : null,
-      el("button", { class: "pt-selbar-btn del", title: "Eliminar", onclick: () => bulkAction("delete") }, "🗑️"),
+        ? selBtn("restore", "Restaurar", "unarchive")
+        : selBtn("complete", "Marcar como hechas", "done"),
+      !state.showArchived ? selBtn("archive", "Archivar", "archive") : null,
+      selBtn("trash", "Eliminar", "delete", "del"),
     ]),
   ]);
 }
@@ -100,36 +112,55 @@ export function renderCard(it) {
     el("span", { class: "pt-type" }, typeLabel),
     prio ? el("span", { class: "pt-prio", style: { background: prio.color } }, prio.label) : null,
     it.repeat && it.repeat !== "no"
-      ? el("span", { class: "pt-repeat", title: `Se repite: ${it.repeat}` }, "⟳ " + it.repeat)
+      ? el("span", { class: "pt-repeat pt-badge-ico", title: `Se repite: ${it.repeat}` }, [
+          el("span", { class: "rt-icon-wrap", html: icon("repeat", 12) }),
+          // Texto SIEMPRE como nodo de texto: nunca interpolado en html
+          el("span", {}, it.repeat),
+        ])
       : null,
     due ? el("span", { class: "pt-due", style: { background: due.color } }, due.label) : null,
-    it.alarm ? el("span", { class: "pt-alarm-badge", title: "Notificación tipo alarma" }, "⏰") : null,
+    it.alarm ? el("span", { class: "pt-alarm-badge", title: "Notificación tipo alarma",
+      html: icon("alarm", 13) }) : null,
     state.activeBoardId && it.owner && it.owner !== state.syncNickname
-      ? el("span", { class: "pt-owner", title: `Creado por: ${it.owner}` }, `👤 ${it.owner}`)
+      ? el("span", { class: "pt-owner pt-badge-ico", title: `Creado por: ${it.owner}` }, [
+          el("span", { class: "rt-icon-wrap", html: icon("hero_author", 12) }),
+          // it.owner lo escribe otro usuario del tablero: como texto,
+          // nunca como HTML (evita inyección desde un nombre).
+          el("span", {}, it.owner),
+        ])
       : null,
   ]);
 
   // Acciones: en la vista de archivadas se puede restaurar; en la
   // normal, completar / archivar / editar / eliminar.
+  // Botón con ícono + texto opcional
+  const actBtn = (iconName, texto, props) =>
+    el("button", props, [
+      el("span", { class: "rt-icon-wrap", html: icon(iconName, 16) }),
+      texto ? el("span", {}, texto) : null,
+    ]);
+
   const actions = state.showArchived
     ? el("div", { class: "pt-actions" }, [
-        el("button", { class: "pt-act on", onclick: () => setArchived(it.id, false) }, "♻️ Restaurar"),
-        el("button", { class: "pt-act del", onclick: () => deleteItem(it.id) }, "Eliminar"),
+        actBtn("restore", "Restaurar", { class: "pt-act on", onclick: () => setArchived(it.id, false) }),
+        actBtn("trash", "Eliminar", { class: "pt-act del", onclick: () => deleteItem(it.id) }),
       ])
     : el("div", { class: "pt-actions" }, [
         it.type !== "nota"
-          ? el("button", {
+          ? actBtn("complete", it.done ? "Hecho" : "Marcar", {
               class: "pt-act" + (it.done ? " on" : ""), "aria-pressed": String(it.done),
               onclick: () => toggleDone(it.id),
-            }, it.done ? "✓ Hecho" : "Marcar")
+            })
           : null,
-        el("button", { class: "pt-act", onclick: () => openSheet(it) }, "Editar"),
-        el("button", { class: "pt-act", "aria-label": `Archivar ${it.title}`,
-          onclick: () => archiveItem(it.id) }, "📦"),
-        el("button", {
+        actBtn("toast_edited", "Editar", { class: "pt-act", onclick: () => openSheet(it) }),
+        actBtn("archive", null, {
+          class: "pt-act", "aria-label": `Archivar ${it.title}`,
+          onclick: () => archiveItem(it.id),
+        }),
+        actBtn("trash", "Eliminar", {
           class: "pt-act del", "aria-label": `Eliminar ${it.title}`,
           onclick: () => deleteItem(it.id),
-        }, "Eliminar"),
+        }),
       ]);
 
   // Objetivos (checklist) con progreso y marcado directo EN SITIO:
@@ -306,9 +337,14 @@ export function renderCard(it) {
   });
 
   // Fondos de swipe (ocultos por defecto; se revelan al arrastrar)
-  const bgDelete = el("div", { class: "pt-card-swipe-bg pt-swipe-left" }, "🗑️ Eliminar");
-  const bgArchive = el("div", { class: "pt-card-swipe-bg pt-swipe-right" },
-    state.showArchived ? "♻️ Restaurar" : "📦 Archivar");
+  const bgDelete = el("div", { class: "pt-card-swipe-bg pt-swipe-left" }, [
+    el("span", { class: "rt-icon-wrap", html: icon("trash", 18) }),
+    el("span", {}, "Eliminar"),
+  ]);
+  const bgArchive = el("div", { class: "pt-card-swipe-bg pt-swipe-right" }, [
+    el("span", { class: "rt-icon-wrap", html: icon(state.showArchived ? "restore" : "archive", 18) }),
+    el("span", {}, state.showArchived ? "Restaurar" : "Archivar"),
+  ]);
 
   return el("div", { class: "pt-card-wrapper" }, [
     bgDelete,
@@ -338,7 +374,8 @@ export function renderFilters() {
       wrap.append(el("button", {
         class: "pt-searchclear", "aria-label": "Limpiar busqueda",
         onclick: () => { state.query = ""; ui.render(); },
-      }, "✕"));
+        html: icon("close", 15),
+      }));
     }
     box.append(wrap);
   }
@@ -358,7 +395,10 @@ export function renderFilters() {
       class: "pt-filterbtn" + (activeFilters() > 0 ? " active" : ""),
       "aria-label": "Abrir filtros",
       onclick: () => openFilters(),
-    }, "⚙" + (activeFilters() > 0 ? ` ${activeFilters()}` : "")),
+    }, [
+      el("span", { class: "rt-icon-wrap", html: icon("filters", 17) }),
+      activeFilters() > 0 ? el("span", {}, String(activeFilters())) : null,
+    ]),
   ]);
   box.append(scopeRow);
 }
@@ -418,7 +458,10 @@ function renderDrawer() {
       "aria-pressed": String(state.showArchived),
       style: state.showArchived ? { background: "var(--accent)", color: "var(--bg-deep)" } : {},
       onclick: () => { state.showArchived = !state.showArchived; closeFilters(); ui.render(); },
-    }, `📦 Ver archivadas (${archCount})`),
+    }, [
+      el("span", { class: "rt-icon-wrap", html: icon("archive", 15) }),
+      el("span", {}, `Ver archivadas (${archCount})`),
+    ]),
   ]));
 
   // Acciones finales del drawer

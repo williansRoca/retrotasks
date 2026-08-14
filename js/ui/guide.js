@@ -9,10 +9,11 @@ import { $, el, showToast } from "./dom.js";
 import { createItem } from "../model.js";
 import { initFirebase, saveUserItem } from "../firebase.js";
 import { doc, setDoc } from "../vendor/firebase-firestore.js";
+import { icon } from "./icons.js";
 
 const SECCIONES = [
   {
-    icono: "⚔️",
+    icono: "swords",
     titulo: "¿Qué es RetroTasks?",
     parrafos: [
       "Es una app para organizar tus tareas, notas y recordatorios del día a día, con la apariencia de un videojuego de rol clásico.",
@@ -20,7 +21,7 @@ const SECCIONES = [
     ],
   },
   {
-    icono: "🎯",
+    icono: "target",
     titulo: "Crear tu primera misión",
     pasos: [
       "Toca el botón + de abajo a la derecha.",
@@ -30,7 +31,7 @@ const SECCIONES = [
     ],
   },
   {
-    icono: "👆",
+    icono: "gesture_tap",
     titulo: "Gestos y acciones",
     lista: [
       ["Deslizar a la derecha", "completa la misión"],
@@ -40,7 +41,7 @@ const SECCIONES = [
     ],
   },
   {
-    icono: "⏰",
+    icono: "guide_reminders",
     titulo: "Recordatorios que avisan",
     parrafos: [
       "Si le pones fecha límite a una misión, recibirás una notificación en el celular cuando llegue la hora, aunque la app esté cerrada.",
@@ -49,7 +50,7 @@ const SECCIONES = [
     consejo: "Si no te llegan las notificaciones, revisa que la app tenga permiso de “Alarmas y recordatorios” y que no esté restringida en segundo plano.",
   },
   {
-    icono: "🗓️",
+    icono: "guide_calendar",
     titulo: "Agenda",
     parrafos: [
       "La pestaña Agenda muestra el mes completo. Los puntos de colores indican los días con misiones pendientes según su categoría.",
@@ -57,7 +58,7 @@ const SECCIONES = [
     ],
   },
   {
-    icono: "🤝",
+    icono: "shared_board",
     titulo: "Tableros compartidos",
     parrafos: [
       "Un tablero es una lista de misiones compartida con otras personas: la lista del supermercado, tareas de la casa o un proyecto de equipo.",
@@ -71,7 +72,7 @@ const SECCIONES = [
     consejo: "Usa el selector de arriba (📁 Personal / 🤝 Tablero) para cambiar entre tus misiones privadas y las compartidas. Tus misiones personales nunca se comparten.",
   },
   {
-    icono: "🎨",
+    icono: "guide_palette",
     titulo: "Ajustes a tu gusto",
     lista: [
       ["Temas", "6 estilos visuales, incluido el modo Sobrio sin estética arcade"],
@@ -81,7 +82,7 @@ const SECCIONES = [
     consejo: "Todo esto está en Perfil → Configuración.",
   },
   {
-    icono: "💡",
+    icono: "guide_lightbulb",
     titulo: "Recomendaciones",
     lista: [
       ["Usa categorías", "separa Hogar, Trabajo y Personal para filtrar rápido"],
@@ -145,7 +146,7 @@ export function openGuide(opts = {}) {
 
   if (firstRun) {
     sheet.append(el("div", { class: "pt-guide-welcome" }, [
-      el("div", { class: "pt-guide-welcome-icon" }, "⚔️"),
+      el("div", { class: "pt-guide-welcome-icon", html: icon("swords", 44) }),
       el("h2", { class: "pt-pixel" }, "¡BIENVENIDO, AVENTURERO!"),
       el("p", { class: "pt-guide-intro", style: { marginBottom: "0" } },
         "Esta es tu guía rápida. Puedes volver a verla cuando quieras desde Perfil → Cómo usar la app."),
@@ -160,7 +161,7 @@ export function openGuide(opts = {}) {
     const bloque = el("section", { class: "pt-guide-sec" });
 
     bloque.append(el("h3", { class: "pt-guide-title" }, [
-      el("span", { class: "pt-guide-icon" }, s.icono),
+      el("span", { class: "pt-guide-icon", html: icon(s.icono, 20) }),
       el("span", {}, s.titulo),
     ]));
 
@@ -185,7 +186,7 @@ export function openGuide(opts = {}) {
 
     if (s.consejo) {
       bloque.append(el("div", { class: "pt-guide-tip" }, [
-        el("span", { class: "pt-guide-tip-icon" }, "💡"),
+        el("span", { class: "pt-guide-tip-icon", html: icon("guide_lightbulb", 16) }),
         el("span", {}, s.consejo),
       ]));
     }

@@ -219,7 +219,7 @@ export async function checkBoardExists(boardId) {
   }
 }
 
-export async function createBoard(boardId, creatorName, creatorId, boardName) {
+export async function createBoard(boardId, creatorName, creatorId, boardName, style = {}) {
   const firestoreDb = initFirebase();
   if (!firestoreDb) return false;
   try {
@@ -228,6 +228,11 @@ export async function createBoard(boardId, creatorName, creatorId, boardName) {
       name: (boardName || "").trim() || "Tablero compartido",
       creator: (creatorName || "").trim() || "Anónimo",
       creatorId: creatorId || null,
+      // Identidad visual propuesta por quien crea el tablero: la
+      // heredan todos los que se unan, y cada quien puede cambiarla
+      // en su propia app si le choca con otro tablero suyo.
+      color: style.color || null,
+      icon: style.icon || null,
       members: [{ userId: creatorId, nickname: creatorName, joinedAt: new Date().toISOString() }],
     });
     return true;

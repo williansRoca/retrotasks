@@ -94,9 +94,24 @@ Todo lo demás (ubicación, contactos, historial, datos financieros, salud): **N
 
 ## 3. Declaración de permisos sensibles
 
-- **SCHEDULE_EXACT_ALARM**: declarar el caso de uso "la función principal de la app son
-  recordatorios/alarmas programadas por el usuario" — es el caso permitido por la política.
+- **SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM**: declarar el caso de uso "la función principal
+  de la app son recordatorios/alarmas programadas por el usuario" — es el caso permitido
+  por la política.
 - **POST_NOTIFICATIONS**: notificaciones de vencimiento y colaboración.
+- **USE_FULL_SCREEN_INTENT** (añadido en v2.2) ⚠️ **requiere atención**:
+  desde Android 14, Google restringe este permiso a apps cuya función principal sean
+  **alarmas o llamadas**. Play Console puede pedir una declaración al subir la versión.
+  Justificación a usar:
+  > RetroTasks es una app de recordatorios y alarmas. El usuario puede marcar una misión
+  > como "alarma"; en ese caso la app muestra una pantalla de alarma a pantalla completa
+  > a la hora programada por el propio usuario, equivalente a un despertador. El permiso
+  > solo se usa para esas alarmas creadas explícitamente por el usuario.
+
+  Si Google lo rechazara, el respaldo ya está implementado: sin el permiso, la alarma
+  se degrada automáticamente a notificación de alta prioridad con sonido de alarma
+  (el servicio en primer plano reproduce el sonido igual). No habría que reescribir nada.
+
+- **FOREGROUND_SERVICE_MEDIA_PLAYBACK**: el servicio que reproduce el sonido de la alarma.
 
 ---
 

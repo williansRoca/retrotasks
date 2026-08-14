@@ -1314,7 +1314,24 @@ input, textarea { font-family: inherit; }
   font-size: 14px;
 }
 
-.pt-theme-dot.active { border-color: var(--accent); transform: scale(1.1); }
+.pt-theme-dot.active {
+  border-color: var(--text-primary);
+  transform: scale(1.08);
+  /* Doble anillo: contrasta sobre fondos claros y oscuros por igual */
+  box-shadow: 0 0 0 2px var(--bg-deep), 0 0 0 5px var(--accent);
+}
+/* Marca de selección en la esquina */
+.pt-theme-dot { position: relative; }
+.pt-theme-dot.active::after {
+  content: "✓";
+  position: absolute; top: -7px; right: -7px;
+  width: 19px; height: 19px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: var(--bg-deep);
+  border-radius: 50%;
+  font-size: 12px; font-weight: 900;
+  border: 2px solid var(--bg-deep);
+}
 .pt-theme-dot:active { transform: scale(0.9); }
 
 /* ============================================================
@@ -2085,3 +2102,126 @@ body.high-contrast :focus-visible { outline: 4px solid var(--accent); outline-of
   background: var(--accent); color: var(--bg-deep);
   border-radius: 3px; font-weight: 800;
 }
+
+/* ============================================================
+ * IDENTIDAD VISUAL POR TABLERO
+ * ============================================================ */
+/* Franja de color bajo la cabecera del tablero activo */
+.pt-ws-stripe { height: 4px; width: 100%; flex: 0 0 4px; }
+
+/* Ícono del espacio en el selector, con su color de fondo */
+.pt-ws-option-icon {
+  width: 34px; height: 34px; flex: 0 0 34px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  font-size: 17px;
+}
+
+/* Selector de color */
+.pt-style-label {
+  font-size: 11px; font-weight: 800; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--text-muted);
+  margin: 14px 0 8px;
+}
+.pt-color-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+}
+.pt-color-dot {
+  aspect-ratio: 1; border-radius: 50%;
+  border: 3px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 900; font-size: 15px;
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+}
+.pt-color-dot.active { border-color: var(--text-primary); transform: scale(1.06); }
+
+/* Selector de ícono */
+.pt-icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.pt-icon-pick {
+  aspect-ratio: 1; font-size: 19px;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+}
+.pt-icon-pick.active { border-width: 3px; background: var(--bg-elevated); }
+
+/* Vista previa al personalizar */
+.pt-style-preview {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; margin-bottom: 4px;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+}
+.pt-style-preview-icon {
+  width: 40px; height: 40px; flex: 0 0 40px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius); font-size: 20px;
+}
+.pt-style-preview-name { font-size: 16px; font-weight: 800; }
+
+/* Destino de la misión en el formulario */
+.pt-sheet-target {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 16px;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+}
+.pt-sheet-target-icon {
+  width: 32px; height: 32px; flex: 0 0 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius);
+  background: var(--bg-elevated); font-size: 16px;
+}
+.pt-sheet-target-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pt-sheet-target-label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+.pt-sheet-target-name {
+  font-size: 14px; font-weight: 800;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pt-sheet-target-badge {
+  font-size: 9px; font-weight: 800; letter-spacing: .5px;
+  padding: 3px 7px; border-radius: 3px;
+  background: var(--accent); color: var(--bg-deep);
+}
+
+/* ============================================================
+ * ÍCONOS VECTORIALES (js/ui/icons.js)
+ * Heredan color con currentColor: siguen al tema y al acento
+ * del tablero activo sin ninguna regla extra.
+ * ============================================================ */
+.rt-icon { display: block; flex: 0 0 auto; }
+.rt-icon-wrap { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+
+/* Botones de acción de tarjeta: ícono + texto alineados */
+.pt-act { display: inline-flex; align-items: center; gap: 6px; }
+.pt-badge-ico { display: inline-flex; align-items: center; gap: 4px; }
+.pt-alarm-badge { display: inline-flex; align-items: center; padding: 3px 5px; }
+
+/* Fondos de swipe con ícono */
+.pt-card-swipe-bg { gap: 8px; }
+
+/* Selección múltiple y filtros */
+.pt-selbar-x, .pt-selbar-btn { display: inline-flex; align-items: center; justify-content: center; }
+.pt-filterbtn { display: inline-flex; align-items: center; gap: 5px; }
+.pt-searchclear { display: inline-flex; align-items: center; justify-content: center; }
+
+/* Guía y temas */
+.pt-guide-icon { display: inline-flex; color: var(--accent); }
+.pt-guide-tip-icon { display: inline-flex; color: var(--accent); }
+.pt-guide-welcome-icon { display: flex; justify-content: center; color: var(--accent); }
+.pt-theme-dot { display: flex; align-items: center; justify-content: center; }
+.pt-reset-icon { display: flex; justify-content: center; color: var(--accent); }
+
+/* Íconos de tablero: centrados dentro de su chip de color */
+.pt-icon-pick { color: var(--text-primary); }
+.pt-icon-pick.active { color: var(--accent); }
+.pt-ws-chip-icon, .pt-sheet-target-icon, .pt-style-preview-icon,
+.pt-ws-option-icon, .pt-ws-current-name .rt-icon-wrap {
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.pt-ws-current-name { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.pt-board-name { display: flex; align-items: center; gap: 7px; }

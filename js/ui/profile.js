@@ -15,6 +15,7 @@ import { doc, setDoc, getDoc } from "../vendor/firebase-firestore.js";
 import { el, showToast } from "./dom.js";
 import { openSettings } from "./settings.js";
 import { openGuide } from "./guide.js";
+import { icon } from "./icons.js";
 
 /* ---------- Preferencias del usuario (avatar + tutorial) ---------- */
 
@@ -104,12 +105,13 @@ export function renderProfileView(container) {
         const isActive = activeThemeId === theme.id;
         return el("button", {
           class: "pt-theme-dot" + (isActive ? " active" : ""),
-          style: { background: theme.bg },
+          style: { background: theme.bg, color: theme.accent },
           onclick: async () => {
             await changeTheme(theme.id, setMeta);
             ui.render();
-          }
-        }, theme.emoji);
+          },
+          html: icon(theme.icon, 20),
+        });
       })
     )
   ]);

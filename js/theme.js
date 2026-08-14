@@ -6,14 +6,14 @@
  * ============================================================ */
 
 export const THEMES = [
-  { id: 'fogata',   emoji: '🔥', label: 'Fogata',   bg: '#1A1208', accent: '#FFD24A' },
-  { id: 'helada',   emoji: '❄️', label: 'Helada',   bg: '#0A1628', accent: '#4FC3F7' },
-  { id: 'bosque',   emoji: '🌿', label: 'Bosque',   bg: '#0D1A0D', accent: '#A8E063' },
-  { id: 'amatista', emoji: '💜', label: 'Amatista', bg: '#150D1E', accent: '#C77DFF' },
-  { id: 'rubi',     emoji: '❤️', label: 'Rubí',     bg: '#1E0808', accent: '#FF6B6B' },
+  { id: 'fogata',   icon: 'theme_fogata', label: 'Fogata',   bg: '#1A1208', accent: '#FFD24A' },
+  { id: 'helada',   icon: 'theme_helada', label: 'Helada',   bg: '#0A1628', accent: '#4FC3F7' },
+  { id: 'bosque',   icon: 'theme_bosque', label: 'Bosque',   bg: '#0D1A0D', accent: '#A8E063' },
+  { id: 'amatista', icon: 'theme_amatista', label: 'Amatista', bg: '#150D1E', accent: '#C77DFF' },
+  { id: 'rubi',     icon: 'theme_rubi', label: 'Rubí',     bg: '#1E0808', accent: '#FF6B6B' },
   // Modo sobrio: paleta clara y neutra, sin tipografía pixel ni
   // sombras duras. Para quien prefiere una app de aspecto formal.
-  { id: 'sobrio',   emoji: '📋', label: 'Sobrio',   bg: '#F4F5F7', accent: '#2F6FD0' },
+  { id: 'sobrio',   icon: 'theme_sobrio', label: 'Sobrio',   bg: '#F4F5F7', accent: '#2F6FD0' },
 ];
 
 const DEFAULT_THEME = 'fogata';

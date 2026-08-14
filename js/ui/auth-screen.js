@@ -6,6 +6,7 @@ import { state } from "../state.js";
 import { ui } from "../bus.js";
 import { loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword } from "../auth.js";
 import { $, el } from "./dom.js";
+import { icon } from "./icons.js";
 
 /* ---------- Ventana de recuperación de contraseña ---------- */
 function closeResetSheet() {
@@ -78,7 +79,7 @@ function openResetSheet(emailPrefill = "") {
   function mostrarInstrucciones(correo) {
     sheet.innerHTML = "";
     sheet.append(el("div", { class: "pt-sheet-handle" }));
-    sheet.append(el("div", { class: "pt-reset-icon" }, "📩"));
+    sheet.append(el("div", { class: "pt-reset-icon", html: icon("mail_sent", 44) }));
     sheet.append(el("h2", { class: "pt-pixel", style: { textAlign: "center" } }, "REVISA TU CORREO"));
     sheet.append(el("p", { class: "pt-reset-text" }, [
       "Si ",

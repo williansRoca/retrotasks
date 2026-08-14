@@ -8,6 +8,8 @@ import { ui } from "../bus.js";
 import { TYPES, PRIORITIES, REPEATS, makeChecklistItem } from "../model.js";
 import { $, el, field } from "./dom.js";
 import { saveItem, addCategory } from "../store.js";
+import { boardStyle } from "../board-theme.js";
+import { icon } from "./icons.js";
 
 // Límites alineados con las reglas de seguridad de Firestore
 // (firestore.rules): título <= 500, detalle <= 5000.
@@ -110,6 +112,31 @@ function renderSheet() {
     sheet.append(el("div", { class: "pt-sheet-handle" }));
     sheet.append(el("h2", { class: "pt-pixel" }, init ? "EDITAR MISIÓN" : "NUEVA MISIÓN"));
 
+    /* Destino de la misión. Es el momento de mayor riesgo de error:
+     * dejar claro DÓNDE va a caer lo que se escribe. */
+    const board = state.activeBoardId
+      ? state.boards.find((b) => b.id === state.activeBoardId)
+      : null;
+    const st = boardStyle(board || (state.activeBoardId ? { id: state.activeBoardId } : null));
+    const destinoNombre = state.activeBoardId
+      ? (board?.name || state.activeBoardId)
+      : "Personal";
+    sheet.append(el("div", {
+      class: "pt-sheet-target" + (state.activeBoardId ? " shared" : ""),
+      style: st.color ? { borderColor: st.color } : {},
+    }, [
+      el("span", { class: "pt-sheet-target-icon",
+        style: st.color ? { background: st.color, color: "#fff" } : {},
+        html: icon(st.icon, 17) }),
+      el("span", { class: "pt-sheet-target-text" }, [
+        el("span", { class: "pt-sheet-target-label" }, init ? "Esta misión está en" : "Se creará en"),
+        el("span", { class: "pt-sheet-target-name" }, destinoNombre),
+      ]),
+      state.activeBoardId
+        ? el("span", { class: "pt-sheet-target-badge" }, "COMPARTIDO")
+        : null,
+    ]));
+
     // Tipo
     sheet.append(field("Tipo de Misión", el("div", { class: "pt-pills" },
       TYPES.map((t) => el("button", { class: "pt-pill", "aria-pressed": String(form.type === t.id),
@@ -200,7 +227,7 @@ function renderSheet() {
           "aria-pressed": String(form.alarm),
           onclick: () => { form.alarm = !form.alarm; build(); },
         }, [
-          el("span", { class: "pt-alarm-toggle-icon" }, form.alarm ? "⏰" : "🔔"),
+          el("span", { class: "pt-alarm-toggle-icon", html: icon(form.alarm ? "alarm" : "bell", 20) }),
           el("span", { class: "pt-alarm-toggle-text" },
             form.alarm ? "Alarma activada (sonido fuerte)" : "Notificación normal"),
           el("span", { class: "pt-switch" + (form.alarm ? " on" : "") }, [
