@@ -52,3 +52,27 @@ export async function cancelNativeAlarm(id) {
     console.warn("No se pudo cancelar la alarma nativa:", e);
   }
 }
+
+/* ¿Puede el sistema disparar alarmas a la hora exacta?
+ * En Android 12+ este acceso lo concede el usuario en Ajustes; si
+ * falta, las alarmas llegarían tarde o no llegarían. */
+export async function canScheduleExact() {
+  const p = plugin();
+  if (!p || typeof p.canScheduleExact !== "function") return true;
+  try {
+    const { granted } = await p.canScheduleExact();
+    return granted !== false;
+  } catch (_) {
+    return true; // ante la duda, no molestar al usuario
+  }
+}
+
+export async function openExactAlarmSettings() {
+  const p = plugin();
+  if (!p || typeof p.openExactAlarmSettings !== "function") return;
+  try {
+    await p.openExactAlarmSettings();
+  } catch (e) {
+    console.warn("No se pudo abrir los ajustes de alarmas exactas:", e);
+  }
+}

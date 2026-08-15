@@ -49,8 +49,12 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Alarmas exactas para recordatorios de misiones (Android 12+) -->
+    <!-- SCHEDULE_EXACT_ALARM: el usuario concede este permiso desde los
+         ajustes del sistema (la app se lo pide en local-alarms.js).
+         NO usamos USE_EXACT_ALARM: Google lo reserva a apps cuya función
+         principal es despertador o calendario, y RetroTasks es un gestor
+         de tareas. Declararlo haría que Play rechace la publicación. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <!-- Alarma a pantalla completa con sonido de alarma -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

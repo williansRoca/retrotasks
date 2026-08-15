@@ -10,6 +10,7 @@ import { $, el, field } from "./dom.js";
 import { saveItem, addCategory } from "../store.js";
 import { boardStyle } from "../board-theme.js";
 import { icon } from "./icons.js";
+import { canScheduleExact, openExactAlarmSettings } from "../native-alarm.js";
 
 // Límites alineados con las reglas de seguridad de Firestore
 // (firestore.rules): título <= 500, detalle <= 5000.
@@ -225,7 +226,21 @@ function renderSheet() {
           type: "button",
           class: "pt-alarm-toggle" + (form.alarm ? " on" : ""),
           "aria-pressed": String(form.alarm),
-          onclick: () => { form.alarm = !form.alarm; build(); },
+          onclick: async () => {
+            form.alarm = !form.alarm;
+            build();
+            /* Al activar la alarma, comprobar que el sistema permita
+             * dispararla a la hora exacta. Si no, ofrecer los ajustes:
+             * más útil que descubrirlo cuando la alarma no suene. */
+            if (form.alarm && !(await canScheduleExact())) {
+              const abrir = window.confirm(
+                "Para que las alarmas suenen a la hora exacta, Android pide " +
+                "activar \"Alarmas y recordatorios\" para RetroTasks.\n\n" +
+                "¿Abrir los ajustes ahora?"
+              );
+              if (abrir) await openExactAlarmSettings();
+            }
+          },
         }, [
           el("span", { class: "pt-alarm-toggle-icon", html: icon(form.alarm ? "alarm" : "bell", 20) }),
           el("span", { class: "pt-alarm-toggle-text" },

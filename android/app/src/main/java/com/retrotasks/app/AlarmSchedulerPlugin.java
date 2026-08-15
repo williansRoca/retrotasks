@@ -35,6 +35,41 @@ public class AlarmSchedulerPlugin extends Plugin {
         return PendingIntent.getBroadcast(ctx, id, intent, flags);
     }
 
+    /** ¿El sistema permite programar alarmas exactas?
+     *
+     * Sin USE_EXACT_ALARM (que Google reserva a despertadores y
+     * calendarios), en Android 12+ el usuario debe conceder este
+     * acceso desde Ajustes. La interfaz lo consulta para avisarle
+     * en lugar de dejar que la alarma falle en silencio. */
+    @PluginMethod
+    public void canScheduleExact(PluginCall call) {
+        com.getcapacitor.JSObject ret = new com.getcapacitor.JSObject();
+        boolean allowed = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager am = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
+            allowed = am != null && am.canScheduleExactAlarms();
+        }
+        ret.put("granted", allowed);
+        call.resolve(ret);
+    }
+
+    /** Abre la pantalla del sistema donde se concede el acceso. */
+    @PluginMethod
+    public void openExactAlarmSettings(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                Intent i = new Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                i.setData(android.net.Uri.parse("package:" + getContext().getPackageName()));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+            } catch (Exception e) {
+                call.reject("No se pudo abrir los ajustes: " + e.getMessage());
+                return;
+            }
+        }
+        call.resolve();
+    }
+
     @PluginMethod
     public void schedule(PluginCall call) {
         Integer id = call.getInt("id");
